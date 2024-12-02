@@ -22,31 +22,31 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Payment {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    // course
-    @ManyToOne
-    @JoinColumn(name = "course_id")
-    private Course course;
+  // course
+  @ManyToOne
+  @JoinColumn(name = "course_id")
+  private Course course;
 
-    private float price;
-    private float discount;
+  private float price;
+  private float discount;
 
-    // user
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+  // user
+  @ManyToOne
+  @JoinColumn(name = "user_id")
+  private User user;
 
-    // voucher
-    @OneToOne
-    @JoinColumn(name = "voucher_id")
-    private Voucher voucher;
+  // voucher
+  @OneToOne
+  @JoinColumn(name = "voucher_id")
+  private Voucher voucher;
 
-    private String content;
-    private String paymentUrl;
-    private int status;
-    private Date createdDate;
-    private Date updatedDate;
+  private String content;
+  private String paymentUrl;
+  private int status;
+  private Date createdDate;
+  private Date updatedDate;
 }

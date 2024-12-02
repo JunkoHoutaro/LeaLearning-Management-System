@@ -21,17 +21,18 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Score {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-    private Date createdDate;
-    private Date updatedDate;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+  private Date createdDate;
+  private Date updatedDate;
 
-    @ManyToOne
-    @JoinColumn(name = "quizz_id")
-    private Quizz quizz;
+  @ManyToOne
+  @JoinColumn(name = "user_id")
+  private User user;
+
+  @ManyToOne
+  @JoinColumn(name = "quizz_id")
+  private Quizz quizz;
 }

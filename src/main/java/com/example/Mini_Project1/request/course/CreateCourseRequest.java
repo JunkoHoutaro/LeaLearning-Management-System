@@ -12,16 +12,16 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 public class CreateCourseRequest {
-    @NotNull(message = "User id is required")
-    private UUID userId;
+  @NotNull(message = "User id is required")
+  private UUID userId;
 
-    @NotBlank(message = "Name is required")
-    private String name;
+  @NotBlank(message = "Name is required")
+  private String name;
 
-    @NotNull(message = "Price is required")
-    @PositiveOrZero(message = "Price must be greater than or equal to 0")
-    private float price;
+  @NotNull(message = "Price is required")
+  @PositiveOrZero(message = "Price must be greater than or equal to 0")
+  private float price;
 
-    @Range(min = 0, max = 1)
-    private float discount;
+  @Range(min = 0, max = 1)
+  private float discount;
 }

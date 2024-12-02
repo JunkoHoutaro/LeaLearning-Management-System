@@ -25,19 +25,20 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Chapter {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-    private String name;
-    private Date createdDate;
-    private Date updatedDate;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    // course
-    @ManyToOne
-    @JoinColumn(name = "course_id")
-    private Course course;
+  private String name;
+  private Date createdDate;
+  private Date updatedDate;
 
-    // lesson
-    @OneToMany(mappedBy = "chapter")
-    private List<Lesson> lessons;
+  // course
+  @ManyToOne
+  @JoinColumn(name = "course_id")
+  private Course course;
+
+  // lesson
+  @OneToMany(mappedBy = "chapter")
+  private List<Lesson> lessons;
 }

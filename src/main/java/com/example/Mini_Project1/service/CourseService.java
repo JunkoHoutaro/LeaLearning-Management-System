@@ -10,16 +10,15 @@ import com.example.Mini_Project1.request.course.CreateCourseRequest;
 import com.example.Mini_Project1.request.course.UpdateCourseRequest;
 import com.example.Mini_Project1.response.course.CourseResponse;
 import jakarta.transaction.Transactional;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import org.hibernate.Hibernate;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 import org.springframework.stereotype.Service;
-
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @AllArgsConstructor
@@ -74,7 +73,7 @@ public class CourseService {
 
     public List<CourseResponse> getPurchasedCourses(UUID userId) {
         User user = userRepository.findById(userId.toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + userId.toString()));
+                ()-> new RuntimeException("Can't find user with id " + userId));
 
         List<Payment> payments = paymentRepository.findByUserAndStatus(user,3);
         List<Course> courses = payments.stream().map(Payment::getCourse).toList();
@@ -84,7 +83,7 @@ public class CourseService {
 
     public List<CourseResponse> getCoursesByInstructor(UUID instructorId) {
         User user = userRepository.findById(instructorId.toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + instructorId.toString()));
+                ()-> new RuntimeException("Can't find user with id " + instructorId));
 
         List<Course> courses = courseRepository.findCourseByUser(user);
 
@@ -112,7 +111,7 @@ public class CourseService {
 
     public CourseResponse deleteCourse(UUID courseId) {
         Course course = courseRepository.findById(courseId.toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + courseId.toString()));
+                ()-> new RuntimeException("Can't find user with id " + courseId));
 
         // Delete course -> change status to delete(3)
         course.setStatus(3);

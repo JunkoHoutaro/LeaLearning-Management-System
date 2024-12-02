@@ -8,19 +8,18 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class SwaggerConfig {
-    @Bean
-    public OpenAPI customOpenAPI() {
-        return new OpenAPI().info(new Info()
+  @Bean
+  public OpenAPI customOpenAPI() {
+    return new OpenAPI()
+        .info(
+            new Info()
                 .title("Cursus API")
                 .description("API for managing online course")
                 .version("1.0"));
-    }
+  }
 
-    @Bean
-    public GroupedOpenApi publicApi() {
-        return GroupedOpenApi.builder()
-                .group("public")
-                .pathsToMatch("/**")
-                .build();
-    }
+  @Bean
+  public GroupedOpenApi publicApi() {
+    return GroupedOpenApi.builder().group("public").pathsToMatch("/**").build();
+  }
 }

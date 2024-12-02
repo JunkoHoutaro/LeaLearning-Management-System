@@ -21,18 +21,19 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class RatingHistory {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    @ManyToOne
-    @JoinColumn(name = "course_id")
-    private Course course;
+  @ManyToOne
+  @JoinColumn(name = "course_id")
+  private Course course;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
-    private float rating;
-    private String feedback;
-    private Date createdDate;
+  @ManyToOne
+  @JoinColumn(name = "user_id")
+  private User user;
+
+  private float rating;
+  private String feedback;
+  private Date createdDate;
 }

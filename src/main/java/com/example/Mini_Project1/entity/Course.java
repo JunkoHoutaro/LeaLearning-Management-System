@@ -25,34 +25,35 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Course {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-    private String name;
-    private Date createdDate;
-    private Date updatedDate;
-    private float price;
-    private float discount;
-    private int status;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    // user
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+  private String name;
+  private Date createdDate;
+  private Date updatedDate;
+  private float price;
+  private float discount;
+  private int status;
 
-    // course
-    @OneToMany(mappedBy = "course")
-    private List<Chapter> chapters;
+  // user
+  @ManyToOne
+  @JoinColumn(name = "user_id")
+  private User user;
 
-    // comment
-    @OneToMany(mappedBy = "course")
-    private List<Comment> books;
+  // course
+  @OneToMany(mappedBy = "course")
+  private List<Chapter> chapters;
 
-    // rating
-    @OneToMany(mappedBy = "course")
-    private List<Rating> ratings;
+  // comment
+  @OneToMany(mappedBy = "course")
+  private List<Comment> books;
 
-    // payment
-    @OneToMany(mappedBy = "course")
-    private List<Payment> payments;
+  // rating
+  @OneToMany(mappedBy = "course")
+  private List<Rating> ratings;
+
+  // payment
+  @OneToMany(mappedBy = "course")
+  private List<Payment> payments;
 }
