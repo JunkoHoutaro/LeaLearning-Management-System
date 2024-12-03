@@ -22,13 +22,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Cart {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    @OneToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+  @OneToOne
+  @JoinColumn(name = "user_id")
+  private User user;
 
-    private List<String> courseIds;
+  private List<String> courseIds;
 }

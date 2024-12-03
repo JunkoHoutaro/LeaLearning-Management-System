@@ -22,20 +22,20 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Comment {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    @ManyToOne
-    @JoinColumn(name = "course_id")
-    private Course course;
+  @ManyToOne
+  @JoinColumn(name = "course_id")
+  private Course course;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+  @ManyToOne
+  @JoinColumn(name = "user_id")
+  private User user;
 
-    private String content;
-    private String rootCommentId;
-    private Date createdDate;
-    private Date updatedDate;
+  private String content;
+  private String rootCommentId;
+  private Date createdDate;
+  private Date updatedDate;
 }

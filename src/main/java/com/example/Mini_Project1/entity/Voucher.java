@@ -20,13 +20,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Voucher {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-    private float discountPercent;
-    private String name;
-    private String code;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    @OneToMany(mappedBy = "voucher")
-    private List<UserUsedVoucher> userUsedVouchers;
+  private float discountPercent;
+  private String name;
+  private String code;
+
+  @OneToMany(mappedBy = "voucher")
+  private List<UserUsedVoucher> userUsedVouchers;
 }

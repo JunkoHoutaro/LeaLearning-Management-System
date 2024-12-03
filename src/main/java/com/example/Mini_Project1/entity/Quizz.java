@@ -24,29 +24,30 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Quizz {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-    private float duration;
-    private String name;
-    private Date createdDate;
-    private Date updatedDate;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    // course
-    @OneToOne
-    @JoinColumn(name = "course_id")
-    private Course course;
+  private float duration;
+  private String name;
+  private Date createdDate;
+  private Date updatedDate;
 
-    // chapter
-    @OneToOne
-    @JoinColumn(name = "chapter_id")
-    private Chapter chapter;
+  // course
+  @OneToOne
+  @JoinColumn(name = "course_id")
+  private Course course;
 
-    // question
-    @OneToMany(mappedBy = "quizz")
-    private List<Question> questions;
+  // chapter
+  @OneToOne
+  @JoinColumn(name = "chapter_id")
+  private Chapter chapter;
 
-    // score
-    @OneToMany(mappedBy = "quizz")
-    private List<Score> scores;
+  // question
+  @OneToMany(mappedBy = "quizz")
+  private List<Question> questions;
+
+  // score
+  @OneToMany(mappedBy = "quizz")
+  private List<Score> scores;
 }
