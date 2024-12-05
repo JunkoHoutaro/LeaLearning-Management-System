@@ -7,8 +7,7 @@ import java.util.UUID;
 @Getter
 @Setter
 public class ReplyRequest {
-    private UUID commentId;
-    private UUID userId;
-    @NotBlank(message = "Content cannot be blank")
+    private String commentId;
+    private String userId;
     private String content;
 }

@@ -13,14 +13,4 @@ public class CommentResponse {
     private String rootCommentId;
     private Date createdDate;
     private Date updatedDate;
-
-    public CommentResponse(Comment comment) {
-        this.id = comment.getId();
-        this.courseId = comment.getCourse().getId();
-        this.userId = comment.getUser().getId();
-        this.content = comment.getContent();
-        this.rootCommentId = comment.getRootCommentId();
-        this.createdDate = comment.getCreatedDate();
-        this.updatedDate = comment.getUpdatedDate();
-    }
 }
