@@ -1,40 +1,54 @@
 package com.example.Mini_Project1.controller;
 
 import com.example.Mini_Project1.entity.Question;
+import com.example.Mini_Project1.request.QuizzAndQuestion.CreateQuestionRequest;
+import com.example.Mini_Project1.request.QuizzAndQuestion.UpdateQuestionRequest;
+import com.example.Mini_Project1.response.QuizzAndQuestion.QuestionResponse;
 import com.example.Mini_Project1.service.QuestionService;
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/questions")
+@RequestMapping("/v1/questions")
 @RequiredArgsConstructor
+@AllArgsConstructor
 public class QuestionController {
 
     private QuestionService questionService;
 
+    // create
     @PostMapping
-    public ResponseEntity<Question> createQuestion(@RequestBody Question question) {
-        return ResponseEntity.ok(questionService.saveQuestion(question));
+    public ResponseEntity<QuestionResponse> createQuestion(@Valid @RequestBody CreateQuestionRequest request) {
+        return ResponseEntity.ok(questionService.createQuestionService(request));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Question> getQuestion(@PathVariable String id) {
-        return questionService.getQuestionById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
+    // read all
     @GetMapping
-    public ResponseEntity<List<Question>> getAllQuestions() {
-        return ResponseEntity.ok(questionService.getAllQuestions());
+    public ResponseEntity<List<QuestionResponse>> getAllQuestions() {
+        return ResponseEntity.ok(questionService.getAllQuestionsService());
     }
 
+    // read by correct status
+    @GetMapping("/{correct}")
+    public ResponseEntity<List<QuestionResponse>> getQuestionByCorrect(@PathVariable Character correct) {
+        return ResponseEntity.ok(questionService.getQuestionByCorrectService(correct));
+    }
+
+    // update
+    @PostMapping
+    public ResponseEntity<QuestionResponse> updateQuestion(@Valid @RequestBody UpdateQuestionRequest request) {
+        return ResponseEntity.ok(questionService.updateQuestionService(request));
+    }
+
+    // Delete
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteQuestion(@PathVariable String id) {
-        questionService.deleteQuestionById(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<QuestionResponse> deleteQuestion(@RequestParam String id) {
+        return ResponseEntity.ok(questionService.deleteQuestionService(id));
     }
 }
