@@ -20,15 +20,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class UserUsedVoucher {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+  @ManyToOne
+  @JoinColumn(name = "user_id")
+  private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "voucher_id")
-    private Voucher voucher;
+  @ManyToOne
+  @JoinColumn(name = "voucher_id")
+  private Voucher voucher;
 }

@@ -4,16 +4,16 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
 public class PasswordUtils {
-    private static BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+  private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public static String encryptPassword(String password) {
-        return passwordEncoder.encode(password);
-    }
+  public static String encryptPassword(String password) {
+    return passwordEncoder.encode(password);
+  }
 
-    public static int checkPassword(String passwordWithOutHash, String hashedPassword) {
-        if (passwordEncoder.matches(passwordWithOutHash, hashedPassword) == true) {
-            return 1;
-        }
-        return 0;
+  public static int checkPassword(String passwordWithOutHash, String hashedPassword) {
+    if (passwordEncoder.matches(passwordWithOutHash, hashedPassword)) {
+      return 1;
     }
+    return 0;
+  }
 }
