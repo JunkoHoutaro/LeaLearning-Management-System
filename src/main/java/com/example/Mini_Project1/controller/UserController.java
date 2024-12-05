@@ -35,28 +35,7 @@ public class UserController {
     return ResponseEntity.ok(userService.createUser(createUserRequest));
   }
 
-  @PostMapping("/register")
-  public ResponseEntity<UserResponse> register(@RequestBody CreateUserRequest createUserRequest) {
-    return ResponseEntity.ok(userService.createUser(createUserRequest));
-  }
-
-  @PostMapping("/login")
-  public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest loginRequest) {
-    return ResponseEntity.ok(userService.login(loginRequest));
-  }
-
-  @PostMapping("/refresh-token")
-  public ResponseEntity<TokenResponse> refreshToken(@RequestBody TokenRequest tokenRequest) {
-    return ResponseEntity.ok(userService.refreshToken(tokenRequest.getToken()));
-  }
-
-  @PostMapping("/revoke-token")
-  public ResponseEntity<Void> revokeToken(@RequestBody TokenRequest tokenRequest) {
-    userService.revokeToken(tokenRequest.getToken());
-    return ResponseEntity.noContent().build();
-  }
-
-  @PutMapping("/{id}")
+  @PatchMapping("/{id}")
   public ResponseEntity<UserResponse> updateUser(@PathVariable String id,
       @RequestBody UpdateUserRequest updateUserRequest) {
     return ResponseEntity.ok(userService.updateUser(id, updateUserRequest));
