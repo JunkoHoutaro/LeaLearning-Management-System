@@ -17,7 +17,9 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @AllArgsConstructor
@@ -39,6 +41,7 @@ public class UserService {
         .map(user -> modelMapper.map(user, UserResponse.class));
   }
 
+  @Transactional
   public UserResponse createUser(CreateUserRequest createUserRequest) {
     User user = modelMapper.map(createUserRequest, User.class);
     user.setPassword(passwordEncoder.encode(createUserRequest.getPassword()));
@@ -47,12 +50,99 @@ public class UserService {
     return modelMapper.map(userRepository.save(user), UserResponse.class);
   }
 
+  @Transactional
+  public User findOrCreateUserByEmail(String email, String name) {
+    Optional<User> user = userRepository.findByEmail(email);
+    if (user.isPresent()) {
+      return user.get();
+    }
+    User newUser = new User();
+    newUser.setName(name);
+    newUser.setEmail(email);
+    newUser.setRole("STUDENT");
+    newUser.setCreatedDate(new Date());
+    newUser.setUpdatedDate(new Date());
+    return userRepository.save(newUser);
+  }
+
+  @Transactional
   public TokenResponse login(LoginRequest loginRequest) {
     User user = userRepository.findByEmail(loginRequest.getEmail())
         .orElseThrow(() -> new RuntimeException("Invalid email or password"));
     if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
       throw new RuntimeException("Invalid email or password");
     }
+    return getTokenResponse(user);
+  }
+
+  @Transactional
+  public TokenResponse refreshToken(String refreshToken) {
+    if (!jwtTokenUtils.validateToken(refreshToken)) {
+      throw new RuntimeException("Invalid refresh token");
+    }
+    String userId = jwtTokenUtils.getUserIdFromToken(refreshToken);
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new RuntimeException("User not found"));
+    String newAccessToken = jwtTokenUtils.createToken(user);
+    String newRefreshToken = jwtTokenUtils.createRefreshToken(user);
+    Token token = new Token();
+    token.setUser(user);
+    token.setToken(newRefreshToken);
+    token.setType("REFRESH");
+    token.setExpiredTime(jwtTokenUtils.getExpirationDate(newRefreshToken));
+    tokenRepository.save(token);
+    TokenResponse tokenResponse = new TokenResponse();
+    tokenResponse.setAccessToken(newAccessToken);
+    tokenResponse.setRefreshToken(newRefreshToken);
+    return tokenResponse;
+  }
+
+  @Transactional
+  public void revokeToken(String refreshToken) {
+    Token token = tokenRepository.findByToken(refreshToken)
+        .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+    tokenRepository.delete(token);
+  }
+
+  @Transactional
+  public UserResponse updateUser(String id, UpdateUserRequest updateUserRequest) {
+    User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+
+    if (updateUserRequest.getName() != null) {
+      user.setName(updateUserRequest.getName());
+    }
+    if (updateUserRequest.getEmail() != null) {
+      user.setEmail(updateUserRequest.getEmail());
+    }
+    if (updateUserRequest.getDob() != null) {
+      user.setDob(updateUserRequest.getDob());
+    }
+    if (updateUserRequest.getPassword() != null && !updateUserRequest.getPassword().isEmpty()) {
+      user.setPassword(passwordEncoder.encode(updateUserRequest.getPassword()));
+    }
+    if (updateUserRequest.getRole() != null) {
+      user.setRole(updateUserRequest.getRole());
+    }
+    user.setUpdatedDate(new Date());
+
+    return modelMapper.map(userRepository.save(user), UserResponse.class);
+  }
+
+  @Transactional
+  public void deleteUser(String id) {
+    userRepository.deleteById(id);
+  }
+
+
+  @Transactional
+  public TokenResponse googleLogin(OAuth2User oauth2User) {
+    String email = oauth2User.getAttribute("email");
+    String name = oauth2User.getAttribute("name");
+    User user = findOrCreateUserByEmail(email, name);
+    return getTokenResponse(user);
+  }
+
+  private TokenResponse getTokenResponse(User user) {
     String accessToken = jwtTokenUtils.createToken(user);
     String refreshToken = jwtTokenUtils.createRefreshToken(user);
 
@@ -75,46 +165,5 @@ public class UserService {
     tokenResponse.setAccessToken(accessToken);
     tokenResponse.setRefreshToken(refreshToken);
     return tokenResponse;
-  }
-
-  public TokenResponse refreshToken(String refreshToken) {
-    if (!jwtTokenUtils.validateToken(refreshToken)) {
-      throw new RuntimeException("Invalid refresh token");
-    }
-    String userId = jwtTokenUtils.getUserIdFromToken(refreshToken);
-    User user = userRepository.findById(userId)
-        .orElseThrow(() -> new RuntimeException("User not found"));
-    String newAccessToken = jwtTokenUtils.createToken(user);
-    String newRefreshToken = jwtTokenUtils.createRefreshToken(user);
-    Token token = new Token();
-    token.setUser(user);
-    token.setToken(newRefreshToken);
-    token.setType("REFRESH");
-    token.setExpiredTime(jwtTokenUtils.getExpirationDate(newRefreshToken));
-    tokenRepository.save(token);
-    TokenResponse tokenResponse = new TokenResponse();
-    tokenResponse.setAccessToken(newAccessToken);
-    tokenResponse.setRefreshToken(newRefreshToken);
-    return tokenResponse;
-  }
-
-  public void revokeToken(String refreshToken) {
-    Token token = tokenRepository.findByToken(refreshToken)
-        .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
-    tokenRepository.delete(token);
-  }
-
-  public UserResponse updateUser(String id, UpdateUserRequest updateUserRequest) {
-    User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-    modelMapper.map(updateUserRequest, user);
-    if (updateUserRequest.getPassword() != null && !updateUserRequest.getPassword().isEmpty()) {
-      user.setPassword(passwordEncoder.encode(updateUserRequest.getPassword()));
-    }
-    user.setUpdatedDate(new Date());
-    return modelMapper.map(userRepository.save(user), UserResponse.class);
-  }
-
-  public void deleteUser(String id) {
-    userRepository.deleteById(id);
   }
 }
