@@ -1,48 +1,54 @@
 package com.example.Mini_Project1.controller;
 
-import com.example.Mini_Project1.entity.Lesson;
+import com.example.Mini_Project1.request.lesson.CreateLessonRequest;
+import com.example.Mini_Project1.request.lesson.UpdateLessonRequest;
+import com.example.Mini_Project1.response.lesson.LessonResponse;
 import com.example.Mini_Project1.service.LessonService;
-import org.springframework.beans.factory.annotation.Autowired;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/lessons")
+@AllArgsConstructor
+@RequestMapping("v1/lesson")
 public class LessonController {
-
-    @Autowired
-    private LessonService lessonService;
-
-    @GetMapping
-    public List<Lesson> getAllLessons() {
-        return lessonService.getAllLessons();
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Lesson> getLessonById(@PathVariable String id) {
-        Optional<Lesson> lesson = lessonService.getLessonById(id);
-        return lesson.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
+    private final LessonService lessonService;
 
     @PostMapping
-    public Lesson createLesson(@RequestBody Lesson lesson) {
-        return lessonService.createLesson(lesson);
+    @Operation(summary = "Create a new lesson")
+    @ApiResponse(responseCode = "200", description = "Create successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid request body")
+    public ResponseEntity<LessonResponse> createNewLesson(@Valid @RequestBody CreateLessonRequest request) {
+        return ResponseEntity.ok(lessonService.createLesson(request));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Lesson> updateLesson(@PathVariable String id, @RequestBody Lesson lessonDetails) {
-        Lesson updatedLesson = lessonService.updateLesson(id, lessonDetails);
-        return updatedLesson != null ? ResponseEntity.ok(updatedLesson)
-                : ResponseEntity.notFound().build();
+    @GetMapping
+    @Operation(summary = "Get lessons by chapter ID")
+    @ApiResponse(responseCode = "200", description = "Get successfully")
+    public ResponseEntity<List<LessonResponse>> getLessonsByChapter(
+            @Parameter(description = "Chapter ID to get related lessons") @RequestParam UUID chapterId) {
+        return ResponseEntity.ok(lessonService.getLessonsByChapter(chapterId));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteLesson(@PathVariable String id) {
-        return lessonService.deleteLesson(id) ? ResponseEntity.noContent().build()
-                : ResponseEntity.notFound().build();
+    @PatchMapping
+    @Operation(summary = "Update lesson information")
+    @ApiResponse(responseCode = "200", description = "Update successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid request body")
+    public ResponseEntity<LessonResponse> updateLesson(@Valid @RequestBody UpdateLessonRequest request) {
+        return ResponseEntity.ok(lessonService.updateLesson(request));
+    }
+
+    @DeleteMapping
+    @Operation(summary = "Delete a lesson")
+    @ApiResponse(responseCode = "200", description = "Delete successfully")
+    public ResponseEntity<LessonResponse> deleteLesson(@RequestParam UUID lessonId) {
+        return ResponseEntity.ok(lessonService.deleteLesson(lessonId));
     }
 }

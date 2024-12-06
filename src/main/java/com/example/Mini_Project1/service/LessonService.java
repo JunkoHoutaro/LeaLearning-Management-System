@@ -1,43 +1,83 @@
 package com.example.Mini_Project1.service;
 
 import com.example.Mini_Project1.entity.Lesson;
+import com.example.Mini_Project1.entity.Chapter;
 import com.example.Mini_Project1.repository.LessonRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.Mini_Project1.repository.ChapterRepository;
+import com.example.Mini_Project1.request.lesson.CreateLessonRequest;
+import com.example.Mini_Project1.request.lesson.UpdateLessonRequest;
+import com.example.Mini_Project1.response.lesson.LessonResponse;
+import jakarta.transaction.Transactional;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.modelmapper.TypeToken;
+
+import java.util.Date;
 import java.util.List;
-import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class LessonService {
 
-    @Autowired
-    private LessonRepository lessonRepository;
+    private final LessonRepository lessonRepository;
+    private final ChapterRepository chapterRepository;
 
-    public List<Lesson> getAllLessons() {
-        return lessonRepository.findAll();
+    public LessonService(LessonRepository lessonRepository, ChapterRepository chapterRepository) {
+        this.lessonRepository = lessonRepository;
+        this.chapterRepository = chapterRepository;
     }
 
-    public Optional<Lesson> getLessonById(String id) {
-        return lessonRepository.findById(id);
+    @Transactional
+    public LessonResponse createLesson(CreateLessonRequest request) {
+        Chapter chapter = chapterRepository.findById(request.getChapterId().toString()).orElseThrow(
+                () -> new RuntimeException("Chapter not found with ID: " + request.getChapterId().toString()));
+
+        ModelMapper modelMapper = new ModelMapper();
+        modelMapper.getConfiguration().setSkipNullEnabled(true);
+
+        Lesson lesson = modelMapper.map(request, Lesson.class);
+        lesson.setChapter(chapter);
+        lesson.setCreatedDate(new Date());
+        lesson.setUpdatedDate(new Date());
+
+        Lesson savedLesson = lessonRepository.save(lesson);
+        return modelMapper.map(savedLesson, LessonResponse.class);
     }
 
-    public Lesson createLesson(Lesson lesson) {
-        return lessonRepository.save(lesson);
+    public List<LessonResponse> getLessonsByChapter(UUID chapterId) {
+
+        Chapter chapter = chapterRepository.findById(chapterId.toString()).orElseThrow(
+                () -> new RuntimeException("Chapter not found with ID: " + chapterId.toString()));
+
+        List<Lesson> lessons = lessonRepository.findByChapter(chapter);
+        ModelMapper modelMapper = new ModelMapper();
+        return modelMapper.map(lessons, new TypeToken<List<LessonResponse>>() {
+        }.getType());
     }
 
-    public Lesson updateLesson(String id, Lesson lessonDetails) {
-        if (lessonRepository.existsById(id)) {
-            lessonDetails.setId(id);
-            return lessonRepository.save(lessonDetails);
-        }
-        return null;
+    @Transactional
+    public LessonResponse updateLesson(UpdateLessonRequest request) {
+
+        Lesson lesson = lessonRepository.findById(request.getLessonId().toString()).orElseThrow(
+                () -> new RuntimeException("Lesson not found with ID: " + request.getLessonId().toString()));
+
+        lesson.setUpdatedDate(new Date());
+
+        ModelMapper modelMapper = new ModelMapper();
+        modelMapper.map(request, lesson);
+
+        Lesson updatedLesson = lessonRepository.save(lesson);
+        return modelMapper.map(updatedLesson, LessonResponse.class);
     }
 
-    public boolean deleteLesson(String id) {
-        if (lessonRepository.existsById(id)) {
-            lessonRepository.deleteById(id);
-            return true;
-        }
-        return false;
+    @Transactional
+    public LessonResponse deleteLesson(UUID lessonId) {
+
+        Lesson lesson = lessonRepository.findById(lessonId.toString()).orElseThrow(
+                () -> new RuntimeException("Lesson not found with ID: " + lessonId.toString()));
+
+        lessonRepository.delete(lesson);
+        ModelMapper modelMapper = new ModelMapper();
+        return modelMapper.map(lessonRepository.save(lesson), LessonResponse.class);
     }
 }

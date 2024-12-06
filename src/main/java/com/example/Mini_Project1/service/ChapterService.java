@@ -1,43 +1,88 @@
 package com.example.Mini_Project1.service;
 
 import com.example.Mini_Project1.entity.Chapter;
+import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.repository.ChapterRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.Mini_Project1.repository.CourseRepository;
+import com.example.Mini_Project1.request.chapter.CreateChapterRequest;
+import com.example.Mini_Project1.request.chapter.UpdateChapterRequest;
+import com.example.Mini_Project1.response.chapter.ChapterResponse;
+import jakarta.transaction.Transactional;
+import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeToken;
+
 import org.springframework.stereotype.Service;
+
+import java.util.Date;
 import java.util.List;
-import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class ChapterService {
 
-    @Autowired
-    private ChapterRepository chapterRepository;
+    private final ChapterRepository chapterRepository;
+    private final CourseRepository courseRepository;
+    private final ModelMapper modelMapper;
 
-    public List<Chapter> getAllChapters() {
-        return chapterRepository.findAll();
+    public ChapterService(ChapterRepository chapterRepository, CourseRepository courseRepository,
+            ModelMapper modelMapper) {
+        this.chapterRepository = chapterRepository;
+        this.courseRepository = courseRepository;
+        this.modelMapper = modelMapper;
     }
 
-    public Optional<Chapter> getChapterById(String id) {
-        return chapterRepository.findById(id);
+    @Transactional
+    public ChapterResponse createChapter(CreateChapterRequest request) {
+
+        Course course = courseRepository.findById(request.getCourseId().toString())
+                .orElseThrow(
+                        () -> new RuntimeException("Course not found with ID: " + request.getCourseId().toString()));
+
+        Chapter chapter = modelMapper.map(request, Chapter.class);
+
+        chapter.setCourse(course); // Liên kết với Course
+        chapter.setCreatedDate(new Date());
+        chapter.setUpdatedDate(new Date());
+
+        Chapter savedChapter = chapterRepository.save(chapter);
+        return modelMapper.map(savedChapter, ChapterResponse.class);
     }
 
-    public Chapter createChapter(Chapter chapter) {
-        return chapterRepository.save(chapter);
+    public List<ChapterResponse> getChaptersByCourse(UUID courseId) {
+
+        Course course = courseRepository.findById(courseId.toString())
+                .orElseThrow(() -> new RuntimeException("Course not found with ID: " + courseId.toString()));
+        List<Chapter> chapters = chapterRepository.findByCourse(course);
+        return modelMapper.map(chapters, new TypeToken<List<ChapterResponse>>() {
+        }.getType());
     }
 
-    public Chapter updateChapter(String id, Chapter chapterDetails) {
-        if (chapterRepository.existsById(id)) {
-            chapterDetails.setId(id);
-            return chapterRepository.save(chapterDetails);
-        }
-        return null;
+    @Transactional
+    public ChapterResponse updateChapter(UpdateChapterRequest request) {
+
+        Chapter chapter = chapterRepository.findById(request.getChapterId().toString())
+                .orElseThrow(
+                        () -> new RuntimeException("Chapter not found with ID: " + request.getChapterId().toString()));
+
+        modelMapper.map(request, chapter);
+
+        chapter.setUpdatedDate(new Date());
+
+        Chapter updatedChapter = chapterRepository.save(chapter);
+        return modelMapper.map(updatedChapter, ChapterResponse.class);
     }
 
-    public boolean deleteChapter(String id) {
-        if (chapterRepository.existsById(id)) {
-            chapterRepository.deleteById(id);
-            return true;
-        }
-        return false;
+    @Transactional
+    public ChapterResponse deleteChapter(UUID chapterId) {
+        // Kiểm tra nếu Chapter có tồn tại không
+        Chapter chapter = chapterRepository.findById(chapterId.toString())
+                .orElseThrow(() -> new RuntimeException("Chapter not found with ID: " + chapterId.toString()));
+
+        // Xóa chapter
+        chapterRepository.delete(chapter);
+
+        // Trả về ChapterResponse sau khi xóa
+        return modelMapper.map(chapter, ChapterResponse.class);
     }
+
 }

@@ -2,9 +2,6 @@ package com.example.Mini_Project1.entity;
 
 import java.util.Date;
 
-import org.apache.tomcat.jni.Library;
-
-import jakarta.annotation.Generated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
