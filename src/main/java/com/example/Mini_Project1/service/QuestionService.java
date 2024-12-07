@@ -7,26 +7,32 @@ import com.example.Mini_Project1.repository.QuizzRepository;
 import com.example.Mini_Project1.request.QuizzAndQuestion.CreateQuestionRequest;
 import com.example.Mini_Project1.request.QuizzAndQuestion.UpdateQuestionRequest;
 import com.example.Mini_Project1.response.QuizzAndQuestion.QuestionResponse;
-import com.example.Mini_Project1.response.QuizzAndQuestion.QuizzResponse;
+import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
 
 import java.util.Date;
-
+import java.util.UUID;
 import java.util.List;
+import java.util.stream.Collectors;
 
+@Service
+@AllArgsConstructor
 public class QuestionService {
-    private QuestionRepository quesRepository;
-    private QuizzRepository quizzRepository;
 
-    @Bean
-    // create
+    private final QuestionRepository quesRepository;
+    private final QuizzRepository quizzRepository;
+
+    @Transactional
+    // create question
     public QuestionResponse createQuestionService(CreateQuestionRequest request){
         Quizz quizz = quizzRepository.findById(request.getQuizzId().toString()).orElseThrow
-                (()-> new RuntimeException("Can't find quizz with id " + request.getQuizzId().toString()));
+                (()-> new RuntimeException("Quizz not found with id " + request.getQuizzId().toString()));
 
         if(quesRepository.existsByContentAndQuizz(request.getContent().trim(), quizz))
             throw new RuntimeException("This question has already exist on this quizz");
@@ -37,33 +43,43 @@ public class QuestionService {
             Question question = modelMapper.map(request, Question.class);
             question.setQuizz(quizz);
             quizz.setUpdatedDate(new Date());
+            quizzRepository.save(quizz);
 
             return modelMapper.map(quesRepository.save(question), QuestionResponse.class);
         }
     }
 
-    // read all
-    public List<QuestionResponse> getAllQuestionsService(){
-        List<Question> questions = quesRepository.findAll();
+    @Transactional
+    // get all by quizz
+    public List<QuestionResponse> getAllQuestionsService(UUID quizzId){
+        Quizz quizz = quizzRepository.findById(quizzId.toString()).orElseThrow
+                (()-> new RuntimeException("Quizz not found with id " + quizzId.toString()));
+        List<Question> questions = quesRepository.findByQuizz(quizz);
+
         return new ModelMapper().map(questions, new TypeToken<List<QuestionResponse>>() {}.getType());
     }
 
-    // read by correct status
-    public List<QuestionResponse> getQuestionByCorrectService (Character correct){
+    @Transactional
+    // search by correct status
+    public List<QuestionResponse> getQuestionByCorrectService (UUID quizzId, Character correct){
+        Quizz quizz = quizzRepository.findById(quizzId.toString()).orElseThrow
+                (()-> new RuntimeException("Quizz not found with id " + quizzId.toString()));
+
         if(correct == null){
-            List<Question> questions = quesRepository.findAll();
+            List<Question> questions = quesRepository.findByQuizz(quizz);
             return new ModelMapper().map(questions, new TypeToken<List<QuestionResponse>>() {}.getType());
         }
-        List<Question> questions = quesRepository.findByCorrect(correct);
-        return new ModelMapper().map(questions, new TypeToken<List<QuestionResponse>>() {}.getType());
+        List<Question> questions1 = quesRepository.findByQuizzAndCorrect(quizz, correct);
+        return new ModelMapper().map(questions1, new TypeToken<List<QuestionResponse>>() {}.getType());
     }
 
+    @Transactional
     // update
     public QuestionResponse updateQuestionService(UpdateQuestionRequest request) {
         Question question = quesRepository.findById(request.getQuestionId().toString()).orElseThrow(
-                () -> new RuntimeException("Can't find question with id " + request.getQuestionId()));
-        Quizz quizz = quizzRepository.findById(request.getQuizzId().toString()).orElseThrow(
-                () -> new RuntimeException("Can't find quizz with id " + request.getQuizzId().toString()));
+                () -> new RuntimeException("Question not found with id " + request.getQuestionId()));
+        Quizz quizz = quizzRepository.findById(question.getQuizz().getId().toString()).orElseThrow(
+                () -> new RuntimeException("Quizz not found with id " + question.getQuizz().getId().toString()));
         if (request.getContent() != null && quesRepository.existsByContentAndQuizz(request.getContent(), quizz)) {
             throw new RuntimeException("This question has already exist on this quizz");
         }
@@ -76,13 +92,17 @@ public class QuestionService {
         return modelMapper.map(quesRepository.save(question), QuestionResponse.class);
     }
 
+    @Transactional
     // delete
-    public QuestionResponse deleteQuestionService(String questionId){
+    public QuestionResponse deleteQuestionService(UUID questionId){
         Question question = quesRepository.findById(questionId.toString()).orElseThrow
-                (() -> new RuntimeException("Can't find question with id " + questionId.toString()));
+                (() -> new RuntimeException("Question not found with id " + questionId.toString()));
+        Quizz quizz = quizzRepository.findById(question.getQuizz().getId().toString()).orElseThrow(
+                () -> new RuntimeException("Quizz not found with id " + question.getQuizz().getId().toString()));
+        quizz.setUpdatedDate(new Date());
+        quizzRepository.save(quizz);
 
-        question.getQuizz().setUpdatedDate(new Date());
-        quesRepository.deleteById(questionId);
-        return new ModelMapper().map(quesRepository.save(question), QuestionResponse.class);
+        quesRepository.delete(question);
+        return new ModelMapper().map(question, QuestionResponse.class);
     }
 }

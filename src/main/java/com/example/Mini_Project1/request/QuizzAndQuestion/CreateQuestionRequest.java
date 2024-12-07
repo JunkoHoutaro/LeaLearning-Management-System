@@ -6,11 +6,13 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.UUID;
+
 @AllArgsConstructor
 @Getter
 public class CreateQuestionRequest {
     @NotNull(message = "Quizz id is required")
-    private String quizzId;
+    private UUID quizzId;
 
     @NotBlank(message = "Options are required")
     private String options;

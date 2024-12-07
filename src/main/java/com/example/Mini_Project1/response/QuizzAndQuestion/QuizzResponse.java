@@ -23,4 +23,6 @@ public class QuizzResponse implements Serializable {
     private Date updatedDate;
 
     private String courseId;
+
+    private String chapterId;
 }
