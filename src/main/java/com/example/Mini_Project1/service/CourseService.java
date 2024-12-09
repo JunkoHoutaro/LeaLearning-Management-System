@@ -3,6 +3,9 @@ package com.example.Mini_Project1.service;
 import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.Payment;
 import com.example.Mini_Project1.entity.User;
+import com.example.Mini_Project1.enums.Action;
+import com.example.Mini_Project1.exception.BadRequestException;
+import com.example.Mini_Project1.exception.NotFoundException;
 import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.repository.PaymentRepository;
 import com.example.Mini_Project1.repository.UserRepository;
@@ -26,6 +29,7 @@ public class CourseService {
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
     private final PaymentRepository paymentRepository;
+    private final ModelMapper modelMapper;
 
     @Transactional
     public CourseResponse createCourse(CreateCourseRequest request) {
@@ -34,9 +38,6 @@ public class CourseService {
 
         if(courseRepository.existsByNameAndUser(request.getName(), user))
             throw new RuntimeException("This instructor has created a course with the same name");
-
-        ModelMapper modelMapper = new ModelMapper();
-        modelMapper.getConfiguration().setSkipNullEnabled(true);
 
         Course course = modelMapper.map(request, Course.class);
         course.setUser(user);
@@ -48,14 +49,13 @@ public class CourseService {
     }
 
     public List<CourseResponse> getCoursesByStatus(Integer status) {
-        if(status == null)
-        {
+        if(status == null) {
             List<Course> courses = courseRepository.findAll();
-            return new ModelMapper().map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+            return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
         }
 
         List<Course> courses = courseRepository.findCourseByStatus(status);
-        return new ModelMapper().map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
     }
 
     public List<CourseResponse> searchCourses(String name, boolean priceAscending) {
@@ -68,7 +68,7 @@ public class CourseService {
         else
             courses.sort(Comparator.comparing(Course::getPrice).reversed());
 
-        return new ModelMapper().map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
     }
 
     public List<CourseResponse> getPurchasedCourses(UUID userId) {
@@ -78,7 +78,7 @@ public class CourseService {
         List<Payment> payments = paymentRepository.findByUserAndStatus(user,3);
         List<Course> courses = payments.stream().map(Payment::getCourse).toList();
 
-        return new ModelMapper().map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
     }
 
     public List<CourseResponse> getCoursesByInstructor(UUID instructorId) {
@@ -87,7 +87,7 @@ public class CourseService {
 
         List<Course> courses = courseRepository.findCourseByUser(user);
 
-        return new ModelMapper().map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
     }
 
     @Transactional
@@ -101,9 +101,6 @@ public class CourseService {
             throw new RuntimeException("This instructor has created a course with the same name");
 
         course.setUpdatedDate(new Date());
-
-        ModelMapper modelMapper = new ModelMapper();
-        modelMapper.getConfiguration().setSkipNullEnabled(true);
         modelMapper.map(request, course);
 
         return modelMapper.map(courseRepository.save(course), CourseResponse.class);
@@ -117,6 +114,19 @@ public class CourseService {
         course.setStatus(3);
         course.setUpdatedDate(new Date());
 
-        return new ModelMapper().map(courseRepository.save(course), CourseResponse.class);
+        return modelMapper.map(courseRepository.save(course), CourseResponse.class);
+    }
+
+    public CourseResponse actionOnCourse(UUID courseId, Action action) {
+        Course course = courseRepository.findById(courseId.toString()).orElseThrow(
+                ()-> new NotFoundException("Can't find course with id " + courseId)
+        );
+
+        if(course.getStatus() != 1) throw new BadRequestException("The course status is not 'Pending'");
+
+        if(action.equals(Action.ACCEPT)) course.setStatus(2);
+        if(action.equals(Action.DECLINE)) course.setStatus(3);
+
+        return modelMapper.map(courseRepository.save(course), CourseResponse.class);
     }
 }

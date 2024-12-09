@@ -1,11 +1,16 @@
 package com.example.Mini_Project1.controller;
 
+import com.example.Mini_Project1.enums.Action;
+import com.example.Mini_Project1.exception.ErrorResponse;
+import com.example.Mini_Project1.exception.NotFoundException;
 import com.example.Mini_Project1.request.course.CreateCourseRequest;
 import com.example.Mini_Project1.request.course.UpdateCourseRequest;
 import com.example.Mini_Project1.response.course.CourseResponse;
 import com.example.Mini_Project1.service.CourseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -77,5 +82,14 @@ public class CourseController {
 //    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'INSTRUCTOR', 'ADMIN')")
     public ResponseEntity<CourseResponse> deleteCourse(@RequestParam UUID courseId) {
         return ResponseEntity.ok(courseService.deleteCourse(courseId));
+    }
+
+    @GetMapping("action")
+    @Operation(summary = "Accept or decline a course created by the instructor")
+    @ApiResponse(responseCode = "200", description = "Change successfully")
+//    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'ADMIN')")
+    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<CourseResponse> actionOnCourse(@RequestParam UUID courseId, @RequestParam Action action) {
+        return ResponseEntity.ok(courseService.actionOnCourse(courseId, action));
     }
 }
