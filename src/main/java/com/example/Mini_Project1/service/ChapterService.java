@@ -78,11 +78,14 @@ public class ChapterService {
         Chapter chapter = chapterRepository.findById(chapterId.toString())
                 .orElseThrow(() -> new RuntimeException("Chapter not found with ID: " + chapterId.toString()));
 
+        // Map Chapter entity to ChapterResponse before deleting
+        ChapterResponse chapterResponse = modelMapper.map(chapter, ChapterResponse.class);
+
         // Xóa chapter
         chapterRepository.delete(chapter);
 
         // Trả về ChapterResponse sau khi xóa
-        return modelMapper.map(chapter, ChapterResponse.class);
+        return chapterResponse;
     }
 
 }

@@ -72,12 +72,17 @@ public class LessonService {
 
     @Transactional
     public LessonResponse deleteLesson(UUID lessonId) {
+        // Kiểm tra nếu Lesson có tồn tại không
+        Lesson lesson = lessonRepository.findById(lessonId.toString())
+                .orElseThrow(() -> new RuntimeException("Lesson not found with ID: " + lessonId.toString()));
 
-        Lesson lesson = lessonRepository.findById(lessonId.toString()).orElseThrow(
-                () -> new RuntimeException("Lesson not found with ID: " + lessonId.toString()));
+        // Map Lesson entity to LessonResponse before deleting
+        LessonResponse lessonResponse = new ModelMapper().map(lesson, LessonResponse.class);
 
+        // Xóa lesson
         lessonRepository.delete(lesson);
-        ModelMapper modelMapper = new ModelMapper();
-        return modelMapper.map(lessonRepository.save(lesson), LessonResponse.class);
+
+        // Trả về LessonResponse sau khi xóa
+        return lessonResponse;
     }
 }
