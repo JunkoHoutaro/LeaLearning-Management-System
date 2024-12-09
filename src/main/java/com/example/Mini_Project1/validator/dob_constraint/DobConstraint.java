@@ -9,18 +9,18 @@ import jakarta.validation.Payload;
 
 import java.lang.annotation.ElementType;
 
-@Target({ ElementType.FIELD })
+@Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
-@Constraint(validatedBy = { MinAgeValidator.class }) // 1 annotation can be validate
-                                                     // by many validators.
+@Constraint(validatedBy = {MinAgeValidator.class}) // 1 annotation can be validate
+// by many validators.
 public @interface DobConstraint {
-    // default
-    String message() default "Age must be >= 18";
+  // default
+  String message() default "Age must be >= 18";
 
-    Class<?>[] groups() default {};
+  Class<?>[] groups() default {};
 
-    Class<? extends Payload>[] payload() default {};
+  Class<? extends Payload>[] payload() default {};
 
-    // custom
-    int min(); // min age
+  // custom
+  int min(); // min age
 }

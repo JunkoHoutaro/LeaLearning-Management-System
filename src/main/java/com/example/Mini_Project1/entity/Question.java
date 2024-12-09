@@ -18,15 +18,16 @@ import jakarta.persistence.Table;
 @AllArgsConstructor
 @Builder
 public class Question {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-    private String options;
-    private char correct;
-    private String content;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    // quizz
-    @ManyToOne
-    @JoinColumn(name = "quizz_id")
-    private Quizz quizz;
+  private String options;
+  private char correct;
+  private String content;
+
+  // quizz
+  @ManyToOne
+  @JoinColumn(name = "quizz_id")
+  private Quizz quizz;
 }

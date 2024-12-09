@@ -21,17 +21,17 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Token {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private String id;
 
-    // user
-    @OneToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+  // user
+  @OneToOne
+  @JoinColumn(name = "user_id")
+  private User user;
 
-    private String token;
-    private String type;
-    private Date expiredTime;
-    private int isBlackListed;
+  private String token;
+  private String type;
+  private Date expiredTime;
+  private int isBlackListed;
 }

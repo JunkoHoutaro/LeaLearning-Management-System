@@ -13,16 +13,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public enum ResponseCode {
-    SignUpSuccessfully(1000, "Sign up successfully!"),
-    LoginSuccessfully(1000, "Login successfully!");
+  SignUpSuccessfully(1000, "Sign up successfully!"),
+  LoginSuccessfully(1000, "Login successfully!");
 
-    private int code;
-    private String message;
+  private int code;
+  private String message;
 
-    public Map<String, Object> responseCodeToJson() {
-        Map<String, Object> map = new HashMap<>();
-        map.put("code", code);
-        map.put("message", message);
-        return map;
-    }
+  public Map<String, Object> responseCodeToJson() {
+    Map<String, Object> map = new HashMap<>();
+    map.put("code", code);
+    map.put("message", message);
+    return map;
+  }
 }
