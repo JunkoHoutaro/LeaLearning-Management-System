@@ -28,7 +28,10 @@ public class Comment {
   private User user;
 
   private String content;
-  private String rootCommentId;
+
+  @Column(name = "root_comment_id")
+  private String rootComment;
+
   private Date createdDate;
   private Date updatedDate;
 }
