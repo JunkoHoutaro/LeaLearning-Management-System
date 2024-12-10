@@ -20,28 +20,28 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    // Tạo mới comment
+    // Comment
     @PostMapping
     public ResponseEntity<CommentResponse> createComment(@RequestBody CommentRequest commentRequest) {
         CommentResponse commentResponse = commentService.createComment(commentRequest);
         return ResponseEntity.ok(commentResponse);
     }
 
-    // Trả lời comment
+    // Reply
     @PostMapping("/reply")
     public ResponseEntity<CommentResponse> replyToComment(@RequestBody ReplyRequest replyRequest) {
         CommentResponse commentResponse = commentService.replyToComment(replyRequest);
         return ResponseEntity.ok(commentResponse);
     }
 
-    // Lấy tất cả comment
+    // Get all comments
     @GetMapping
     public ResponseEntity<List<CommentResponse>> getAllComments() {
         List<CommentResponse> commentResponses = commentService.getAllComments();
         return ResponseEntity.ok(commentResponses);
     }
 
-    // Lấy danh sách comment của một khóa học
+    // Get comments by courseId
     @GetMapping("/{courseId}")
     public ResponseEntity<?> getCommentsByCourseId(@PathVariable String courseId) {
         try {
@@ -54,11 +54,11 @@ public class CommentController {
         }
     }
 
-    // Cập nhật comment
+    // Update comment
     @PatchMapping("/{commentId}")
     public ResponseEntity<?> updateComment(@PathVariable String commentId, @RequestBody @Valid UpdateCommentRequest updateCommentRequest) {
         try {
-            UUID commentUUID = UUID.fromString(commentId); // Chuyển đổi String thành UUID
+            UUID commentUUID = UUID.fromString(commentId);
             CommentResponse commentResponse = commentService.updateCommentContent(commentUUID, updateCommentRequest);
             return ResponseEntity.ok(commentResponse);
         } catch (IllegalArgumentException e) {
@@ -67,7 +67,7 @@ public class CommentController {
         }
     }
 
-    // Xóa comment
+    // Delete comment
     @DeleteMapping("/{commentId}")
     public ResponseEntity<?> deleteComment(@PathVariable String commentId) {
         try {

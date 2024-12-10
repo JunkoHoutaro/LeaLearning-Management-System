@@ -10,6 +10,8 @@ import com.example.Mini_Project1.request.course.CommentRequest;
 import com.example.Mini_Project1.request.course.ReplyRequest;
 import com.example.Mini_Project1.request.course.UpdateCommentRequest;
 import com.example.Mini_Project1.response.CommentResponse;
+
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
@@ -69,6 +71,7 @@ public class CommentService {
         // Trả về CommentResponse
         return modelMapper.map(newComment, CommentResponse.class);
     }
+
     // Trả lời comment
     public CommentResponse replyToComment(ReplyRequest request) {
         Comment parentComment = commentRepository.findById(request.getRootCommentId())
@@ -113,7 +116,7 @@ public class CommentService {
 
         // Cập nhật chỉ nội dung comment
         comment.setContent(request.getContent());
-        comment.setUpdatedDate(new Date());  // Cập nhật thời gian sửa đổi
+        comment.setUpdatedDate(new Date()); // Cập nhật thời gian sửa đổi
 
         // Lưu lại comment đã cập nhật vào cơ sở dữ liệu
         commentRepository.save(comment);
@@ -121,12 +124,25 @@ public class CommentService {
         // Trả về CommentResponse sử dụng ModelMapper
         return modelMapper.map(comment, CommentResponse.class);
     }
+
     // Xóa comment
+    @Transactional
     public String deleteComment(UUID commentId) {
-        // Tìm và xóa comment từ cơ sở dữ liệu
         Comment comment = commentRepository.findById(commentId.toString())
                 .orElseThrow(() -> new RuntimeException("Comment not found"));
+
+        deleteReplies(commentId.toString());
+
         commentRepository.delete(comment);
-        return "Comment deleted successfully";
+
+        return "Comment and its replies deleted successfully";
+    }
+
+    private void deleteReplies(String rootCommentId) {
+        List<Comment> replies = commentRepository.findByRootComment(rootCommentId);
+        for (Comment reply : replies) {
+            deleteReplies(reply.getId());
+            commentRepository.delete(reply);
+        }
     }
 }
