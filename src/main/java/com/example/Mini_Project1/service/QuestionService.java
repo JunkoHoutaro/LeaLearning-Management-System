@@ -42,6 +42,7 @@ public class QuestionService {
 
             Question question = modelMapper.map(request, Question.class);
             question.setQuizz(quizz);
+            question.setOptions(request.getOptions().toString());
             quizz.setUpdatedDate(new Date());
             quizzRepository.save(quizz);
 
@@ -60,20 +61,6 @@ public class QuestionService {
     }
 
     @Transactional
-    // search by correct status
-    public List<QuestionResponse> getQuestionByCorrectService (UUID quizzId, Character correct){
-        Quizz quizz = quizzRepository.findById(quizzId.toString()).orElseThrow
-                (()-> new RuntimeException("Quizz not found with id " + quizzId.toString()));
-
-        if(correct == null){
-            List<Question> questions = quesRepository.findByQuizz(quizz);
-            return new ModelMapper().map(questions, new TypeToken<List<QuestionResponse>>() {}.getType());
-        }
-        List<Question> questions1 = quesRepository.findByQuizzAndCorrect(quizz, correct);
-        return new ModelMapper().map(questions1, new TypeToken<List<QuestionResponse>>() {}.getType());
-    }
-
-    @Transactional
     // update
     public QuestionResponse updateQuestionService(UpdateQuestionRequest request) {
         Question question = quesRepository.findById(request.getQuestionId().toString()).orElseThrow(
@@ -84,6 +71,7 @@ public class QuestionService {
             throw new RuntimeException("This question has already exist on this quizz");
         }
         quizz.setUpdatedDate(new Date());
+        question.setOptions(request.getOptions().toString());
 
         ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration().setSkipNullEnabled(true);
