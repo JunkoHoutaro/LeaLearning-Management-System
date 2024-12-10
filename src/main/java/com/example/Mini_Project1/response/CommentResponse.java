@@ -10,7 +10,7 @@ public class CommentResponse {
     private String courseId;
     private String userId;
     private String content;
-    private String rootCommentId;
+    private String rootComment;
     private Date createdDate;
     private Date updatedDate;
 }

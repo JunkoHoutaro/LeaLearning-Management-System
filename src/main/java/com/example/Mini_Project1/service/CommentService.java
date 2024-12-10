@@ -6,8 +6,9 @@ import com.example.Mini_Project1.entity.User;
 import com.example.Mini_Project1.repository.CommentRepository;
 import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.repository.UserRepository;
-import com.example.Mini_Project1.request.CommentRequest;
-import com.example.Mini_Project1.request.ReplyRequest;
+import com.example.Mini_Project1.request.course.CommentRequest;
+import com.example.Mini_Project1.request.course.ReplyRequest;
+import com.example.Mini_Project1.request.course.UpdateCommentRequest;
 import com.example.Mini_Project1.response.CommentResponse;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -33,7 +34,6 @@ public class CommentService {
             throw new IllegalArgumentException("Course, User, or Content cannot be null");
         }
 
-        // Chuyển đổi từ String sang UUID, với điều kiện là chúng không null
         UUID courseId = null;
         UUID userId = null;
 
@@ -71,8 +71,7 @@ public class CommentService {
     }
     // Trả lời comment
     public CommentResponse replyToComment(ReplyRequest request) {
-        // Tìm comment gốc và người dùng từ cơ sở dữ liệu
-        Comment parentComment = commentRepository.findById(request.getCommentId())
+        Comment parentComment = commentRepository.findById(request.getRootCommentId())
                 .orElseThrow(() -> new RuntimeException("Parent comment not found"));
         User user = userRepository.findById(request.getUserId().toString())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -82,15 +81,12 @@ public class CommentService {
                 .course(parentComment.getCourse())
                 .user(user)
                 .content(request.getContent())
-                .rootComment(request.getCommentId().toString()) // Lưu ID comment gốc để trả lời
+                .rootComment(request.getRootCommentId())
                 .createdDate(new Date())
                 .updatedDate(new Date())
                 .build();
 
-        // Lưu comment trả lời vào cơ sở dữ liệu
         commentRepository.save(reply);
-
-        // Trả về CommentResponse sử dụng ModelMapper
         return modelMapper.map(reply, CommentResponse.class);
     }
 
@@ -110,15 +106,14 @@ public class CommentService {
                 .collect(Collectors.toList());
     }
 
-    // Cập nhật comment
-    public CommentResponse updateComment(UUID commentId, CommentRequest request) {
+    public CommentResponse updateCommentContent(UUID commentId, UpdateCommentRequest request) {
         // Tìm comment từ cơ sở dữ liệu
         Comment comment = commentRepository.findById(commentId.toString())
                 .orElseThrow(() -> new RuntimeException("Comment not found"));
 
-        // Cập nhật nội dung comment và thời gian cập nhật
+        // Cập nhật chỉ nội dung comment
         comment.setContent(request.getContent());
-        comment.setUpdatedDate(new Date());
+        comment.setUpdatedDate(new Date());  // Cập nhật thời gian sửa đổi
 
         // Lưu lại comment đã cập nhật vào cơ sở dữ liệu
         commentRepository.save(comment);
@@ -126,7 +121,6 @@ public class CommentService {
         // Trả về CommentResponse sử dụng ModelMapper
         return modelMapper.map(comment, CommentResponse.class);
     }
-
     // Xóa comment
     public String deleteComment(UUID commentId) {
         // Tìm và xóa comment từ cơ sở dữ liệu

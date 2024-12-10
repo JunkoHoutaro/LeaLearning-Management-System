@@ -1,9 +1,11 @@
 package com.example.Mini_Project1.controller;
 
-import com.example.Mini_Project1.request.CommentRequest;
-import com.example.Mini_Project1.request.ReplyRequest;
+import com.example.Mini_Project1.request.course.CommentRequest;
+import com.example.Mini_Project1.request.course.ReplyRequest;
+import com.example.Mini_Project1.request.course.UpdateCommentRequest;
 import com.example.Mini_Project1.response.CommentResponse;
 import com.example.Mini_Project1.service.CommentService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-
 @RestController
 @RequestMapping("/comments")
 @AllArgsConstructor
@@ -20,7 +21,7 @@ public class CommentController {
     private final CommentService commentService;
 
     // Tạo mới comment
-    @PostMapping("/create")
+    @PostMapping
     public ResponseEntity<CommentResponse> createComment(@RequestBody CommentRequest commentRequest) {
         CommentResponse commentResponse = commentService.createComment(commentRequest);
         return ResponseEntity.ok(commentResponse);
@@ -34,18 +35,18 @@ public class CommentController {
     }
 
     // Lấy tất cả comment
-    @GetMapping("/all")
+    @GetMapping
     public ResponseEntity<List<CommentResponse>> getAllComments() {
         List<CommentResponse> commentResponses = commentService.getAllComments();
         return ResponseEntity.ok(commentResponses);
     }
 
-    // Lấy danh sách comment của một khóa học (course)
-    @GetMapping("/course/{courseId}")
+    // Lấy danh sách comment của một khóa học
+    @GetMapping("/{courseId}")
     public ResponseEntity<?> getCommentsByCourseId(@PathVariable String courseId) {
         try {
             UUID courseUUID = UUID.fromString(courseId);
-            List<CommentResponse> commentResponses = commentService.getCommentsByCourseId(String.valueOf(courseUUID));
+            List<CommentResponse> commentResponses = commentService.getCommentsByCourseId(courseUUID.toString());
             return ResponseEntity.ok(commentResponses);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -54,11 +55,11 @@ public class CommentController {
     }
 
     // Cập nhật comment
-    @PutMapping("/update/{commentId}")
-    public ResponseEntity<?> updateComment(@PathVariable String commentId, @RequestBody CommentRequest commentRequest) {
+    @PatchMapping("/{commentId}")
+    public ResponseEntity<?> updateComment(@PathVariable String commentId, @RequestBody @Valid UpdateCommentRequest updateCommentRequest) {
         try {
             UUID commentUUID = UUID.fromString(commentId); // Chuyển đổi String thành UUID
-            CommentResponse commentResponse = commentService.updateComment(commentUUID, commentRequest);
+            CommentResponse commentResponse = commentService.updateCommentContent(commentUUID, updateCommentRequest);
             return ResponseEntity.ok(commentResponse);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -67,10 +68,10 @@ public class CommentController {
     }
 
     // Xóa comment
-    @DeleteMapping("/delete/{commentId}")
+    @DeleteMapping("/{commentId}")
     public ResponseEntity<?> deleteComment(@PathVariable String commentId) {
         try {
-            UUID commentUUID = UUID.fromString(commentId); // Chuyển đổi String thành UUID
+            UUID commentUUID = UUID.fromString(commentId);
             String message = commentService.deleteComment(commentUUID);
             return ResponseEntity.ok(message);
         } catch (IllegalArgumentException e) {
