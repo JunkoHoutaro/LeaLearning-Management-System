@@ -15,7 +15,7 @@ public class UpdateQuizzRequest {
     @NotNull(message = "Quizz id is required")
     private UUID quizzId;
     @Positive(message = "Duration must be greater than 0")
-    private float duration;
+    private Float duration;
     private String name;
 
 }
