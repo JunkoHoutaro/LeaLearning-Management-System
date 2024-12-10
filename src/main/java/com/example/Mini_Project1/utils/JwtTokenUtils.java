@@ -1,71 +1,97 @@
-// package com.example.Mini_Project1.utils;
+package com.example.Mini_Project1.utils;
 
-// import java.time.Instant;
-// import java.time.temporal.ChronoUnit;
-// import java.util.Date;
+import com.example.Mini_Project1.entity.User;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSObject;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
-// import org.springframework.beans.factory.annotation.Value;
-// import org.springframework.stereotype.Component;
+@Component
+public class JwtTokenUtils {
+  @Value("${jwt.secretKey}")
+  private String secretKey;
 
-// import com.example.Mini_Project1.entity.Student;
-// import com.example.Mini_Project1.exception.ExceptionCode;
-// import com.example.Mini_Project1.exception.UserException;
-// import com.nimbusds.jose.JWSAlgorithm;
-// import com.nimbusds.jose.JWSHeader;
-// import com.nimbusds.jose.JWSObject;
-// import com.nimbusds.jose.JWSVerifier;
-// import com.nimbusds.jose.Payload;
-// import com.nimbusds.jose.crypto.MACSigner;
-// import com.nimbusds.jose.crypto.MACVerifier;
-// import com.nimbusds.jwt.JWTClaimsSet;
-// import com.nimbusds.jwt.SignedJWT;
+  public String createToken(User user) {
+    JWSHeader header = new JWSHeader(JWSAlgorithm.HS256);
+    JWTClaimsSet claim = new JWTClaimsSet.Builder()
+        .subject(user.getId())
+        .issuer("Mini Project 1")
+        .issueTime(new Date())
+        .expirationTime(Date.from(Instant.now().plus(1, ChronoUnit.HOURS)))
+        .claim("role", user.getRole())
+        .build();
+    Payload payload = new Payload(claim.toJSONObject());
+    JWSObject jwsObject = new JWSObject(header, payload);
+    try {
+      jwsObject.sign(new MACSigner(secretKey.getBytes()));
+      return jwsObject.serialize();
+    } catch (Exception e) {
+      throw new RuntimeException("Error creating token", e);
+    }
+  }
 
-// @Component
-// public class JwtTokenUtils {
-// @Value("${jwt.scretKey}")
-// private String secretKey;
+  public String createRefreshToken(User user) {
+    JWSHeader header = new JWSHeader(JWSAlgorithm.HS256);
+    JWTClaimsSet claim = new JWTClaimsSet.Builder()
+        .subject(user.getId())
+        .issuer("Mini Project 1")
+        .issueTime(new Date())
+        .expirationTime(Date.from(Instant.now().plus(7, ChronoUnit.DAYS)))
+        .claim("role", user.getRole())
+        .build();
+    Payload payload = new Payload(claim.toJSONObject());
+    JWSObject jwsObject = new JWSObject(header, payload);
+    try {
+      jwsObject.sign(new MACSigner(secretKey.getBytes()));
+      return jwsObject.serialize();
+    } catch (Exception e) {
+      throw new RuntimeException("Error creating refresh token", e);
+    }
+  }
 
-// public String createToken(Student student) {
-// JWSHeader header = new JWSHeader(JWSAlgorithm.HS256);
-// JWTClaimsSet claim = new JWTClaimsSet.Builder()
-// .subject(student.getId())
-// .issuer("FPT Mini Project 1")
-// .issueTime(new Date())
-// .expirationTime(new Date(
-// Instant.now().plus(1, ChronoUnit.HOURS).toEpochMilli()))
-// .claim("scope", buildScope("student"))
-// .build();
-// Payload payload = new Payload(claim.toJSONObject());
-// JWSObject jwsObject = new JWSObject(header, payload);
-// try {
-// jwsObject.sign(new MACSigner(secretKey.getBytes()));
-// return jwsObject.serialize();
-// } catch (Exception e) {
-// e.printStackTrace();
-// throw new UserException(ExceptionCode.CreateTokenFail);
-// }
-// }
+  public boolean validateToken(String token) {
+    try {
+      SignedJWT signedJWT = SignedJWT.parse(token);
+      JWSVerifier verifier = new MACVerifier(secretKey.getBytes());
+      return signedJWT.verify(verifier) && !isTokenExpired(signedJWT);
+    } catch (Exception e) {
+      return false;
+    }
+  }
 
-// public String verifyToken(String token) { // this function return studentId
-// try {
-// JWSVerifier verifier = new MACVerifier(this.secretKey.getBytes());
-// SignedJWT signedJWT = SignedJWT.parse(token);
-// Date expireTime = (Date) signedJWT.getJWTClaimsSet().getExpirationTime();
-// if (expireTime.before(new Date())) {
-// throw new UserException(ExceptionCode.VerifyTokenFail);
-// } else {
-// if (signedJWT.verify(verifier)) {
-// return signedJWT.getJWTClaimsSet().getSubject();
-// } else {
-// throw new UserException(ExceptionCode.VerifyTokenFail);
-// }
-// }
-// } catch (Exception e) {
-// throw new UserException(ExceptionCode.VerifyTokenFail);
-// }
-// }
+  public String getUserIdFromToken(String token) {
+    try {
+      SignedJWT signedJWT = SignedJWT.parse(token);
+      return signedJWT.getJWTClaimsSet().getSubject();
+    } catch (Exception e) {
+      throw new RuntimeException("Error getting user ID from token", e);
+    }
+  }
 
-// public String buildScope(String role) {
-// return "ROLE_" + role;
-// }
-// }
+  public Date getExpirationDate(String token) {
+    try {
+      SignedJWT signedJWT = SignedJWT.parse(token);
+      return signedJWT.getJWTClaimsSet().getExpirationTime();
+    } catch (Exception e) {
+      throw new RuntimeException("Error getting expiration date from token", e);
+    }
+  }
+
+  private boolean isTokenExpired(SignedJWT signedJWT) {
+    try {
+      return signedJWT.getJWTClaimsSet().getExpirationTime().before(new Date());
+    } catch (java.text.ParseException e) {
+      throw new RuntimeException("Error parsing token expiration date", e);
+    }
+  }
+}

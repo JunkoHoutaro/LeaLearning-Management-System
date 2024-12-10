@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserException extends RuntimeException {
-    private ExceptionCode exceptionCode;
+  private ExceptionCode exceptionCode;
 }

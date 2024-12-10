@@ -9,25 +9,24 @@ import jakarta.validation.ConstraintValidatorContext;
 
 public class MinAgeValidator implements ConstraintValidator<DobConstraint, LocalDate> {
 
-    private int min;
+  private int min;
 
-    @Override
-    public boolean isValid(LocalDate value, ConstraintValidatorContext context) {
-        if (Objects.isNull(value)) { // best practice: 1 validator class is only used to validate 1 logic.
-            return true;
-        }
-        if (ChronoUnit.YEARS.between(value, LocalDate.now()) >= min) { // check min age
-            return true;
-        }
-        return false;
+  @Override
+  public boolean isValid(LocalDate value, ConstraintValidatorContext context) {
+    if (Objects.isNull(
+        value)) { // best practice: 1 validator class is only used to validate 1 logic.
+      return true;
     }
+      // check min age
+      return ChronoUnit.YEARS.between(value, LocalDate.now()) >= min;
+  }
 
-    @Override
-    public void initialize(DobConstraint dobConstraint) { // initialize min value from argument in @DobConstraint in
-                                                          // SignUpRequest.java or any class where contains
-                                                          // @DobConstraint annotation
-        ConstraintValidator.super.initialize(dobConstraint);
-        min = dobConstraint.min();
-    }
-
+  @Override
+  public void initialize(
+      DobConstraint dobConstraint) { // initialize min value from argument in @DobConstraint in
+    // SignUpRequest.java or any class where contains
+    // @DobConstraint annotation
+    ConstraintValidator.super.initialize(dobConstraint);
+    min = dobConstraint.min();
+  }
 }

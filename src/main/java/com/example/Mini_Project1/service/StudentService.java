@@ -1,9 +1,9 @@
 // package com.example.Mini_Project1.service;
-
+//
 // import org.springframework.beans.factory.annotation.Autowired;
 // import org.springframework.http.ResponseEntity;
 // import org.springframework.stereotype.Service;
-
+//
 // import com.example.Mini_Project1.entity.Student;
 // import com.example.Mini_Project1.exception.ExceptionCode;
 // import com.example.Mini_Project1.exception.UserException;
@@ -16,18 +16,18 @@
 // import com.example.Mini_Project1.support_service.SupportStudentService;
 // import com.example.Mini_Project1.utils.JwtTokenUtils;
 // import com.example.Mini_Project1.utils.PasswordUtils;
-
+//
 // @Service
 // public class StudentService {
 // @Autowired
 // private StudentRepository studentRepository;
-
+//
 // @Autowired
 // private StudentMapper studentMapper;
-
+//
 // @Autowired
 // private JwtTokenUtils jwtTokenUtils;
-
+//
 // public ResponseEntity signUp(SignUpRequest signUpRequest) {
 // // check email
 // if (SupportStudentService.checkStudentEmail(signUpRequest.getEmail(),
@@ -48,7 +48,7 @@
 // throw new UserException(ExceptionCode.EmailAlreadyExists);
 // }
 // }
-
+//
 // public ResponseEntity login(LoginRequest loginRequest) {
 // // get student
 // Student student =
