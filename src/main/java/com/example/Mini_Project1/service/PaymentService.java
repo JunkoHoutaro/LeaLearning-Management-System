@@ -3,10 +3,12 @@ package com.example.Mini_Project1.service;
 import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.Payment;
 import com.example.Mini_Project1.entity.User;
+import com.example.Mini_Project1.entity.UserUsedVoucher;
 import com.example.Mini_Project1.entity.Voucher;
 import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.repository.PaymentRepository;
 import com.example.Mini_Project1.repository.UserRepository;
+import com.example.Mini_Project1.repository.UserUsedVoucherRepository;
 import com.example.Mini_Project1.request.payment.CreatePaymentRequest;
 import com.example.Mini_Project1.response.payment.PaymentResponse;
 import com.example.Mini_Project1.response.voucher.VoucherResponse;
@@ -35,6 +37,7 @@ public class PaymentService {
     private final VoucherService voucherService;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final UserUsedVoucherRepository userUsedVoucherRepository;
     private final PayOS payOS;
 
     public PaymentResponse createPayment(CreatePaymentRequest request) {
@@ -49,6 +52,11 @@ public class PaymentService {
 
         VoucherResponse voucherResponse = voucherService.getVoucherByCodeService(request.getVoucherCode());
         Voucher voucher = modelMapper.map(voucherResponse, Voucher.class);
+
+        // Check if the user has already used the voucher
+        if (voucher != null && userUsedVoucherRepository.existsByUserAndVoucher(user, voucher)) {
+            throw new RuntimeException("User has already used this voucher");
+        }
 
         // Calculate the price after applying discounts
         float coursePrice = course.getPrice();
@@ -86,7 +94,7 @@ public class PaymentService {
                 .user(user)
                 .voucher(voucher)
                 .price(finalPrice)
-                .discount(courseDiscount + voucherDiscount)
+                .discount(courseDiscount)
                 .content(orderCode.toString())
                 .paymentUrl(paymentUrl)
                 .status(1)
@@ -95,6 +103,16 @@ public class PaymentService {
                 .build();
 
         Payment savedPayment = paymentRepository.save(newPayment);
+
+        // Add a record to the UserUsedVoucher table
+        if (voucher != null) {
+            UserUsedVoucher userUsedVoucher = UserUsedVoucher.builder()
+                    .user(user)
+                    .voucher(voucher)
+                    .build();
+            userUsedVoucherRepository.save(userUsedVoucher);
+        }
+
         return modelMapper.map(savedPayment, PaymentResponse.class);
     }
 }
