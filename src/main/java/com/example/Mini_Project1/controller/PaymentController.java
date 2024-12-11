@@ -20,7 +20,8 @@ public class PaymentController {
   }
 
   @PostMapping("/checkout")
-  public ResponseEntity<PaymentResponse> checkoutCart(@RequestParam String userId, @RequestParam(required = false) String voucherCode) {
+  public ResponseEntity<PaymentResponse> checkoutCart(
+      @RequestParam String userId, @RequestParam(required = false) String voucherCode) {
     PaymentResponse paymentResponse = paymentService.checkoutCart(userId, voucherCode);
     return ResponseEntity.ok(paymentResponse);
   }
