@@ -40,7 +40,7 @@ public class Payment {
   private User user;
 
   // voucher
-  @OneToOne
+  @ManyToOne
   @JoinColumn(name = "voucher_id")
   private Voucher voucher;
 

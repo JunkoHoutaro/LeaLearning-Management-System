@@ -33,10 +33,10 @@ public class CourseService {
 
     @Transactional
     public CourseResponse createCourse(CreateCourseRequest request) {
-        User user = userRepository.findById(request.getUserId().toString()).orElseThrow
-                (()-> new RuntimeException("Can't find user with id " + request.getUserId().toString()));
+        User user = userRepository.findById(request.getUserId().toString())
+                .orElseThrow(() -> new RuntimeException("Can't find user with id " + request.getUserId().toString()));
 
-        if(courseRepository.existsByNameAndUser(request.getName(), user))
+        if (courseRepository.existsByNameAndUser(request.getName(), user))
             throw new RuntimeException("This instructor has created a course with the same name");
 
         Course course = modelMapper.map(request, Course.class);
@@ -49,55 +49,60 @@ public class CourseService {
     }
 
     public List<CourseResponse> getCoursesByStatus(Integer status) {
-        if(status == null) {
+        if (status == null) {
             List<Course> courses = courseRepository.findAll();
-            return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+            return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {
+            }.getType());
         }
 
         List<Course> courses = courseRepository.findCourseByStatus(status);
-        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {
+        }.getType());
     }
 
     public List<CourseResponse> searchCourses(String name, boolean priceAscending) {
         // Exclude deleted course
-        List<Course> courses = courseRepository.findCourseByNameContainingIgnoreCaseAndStatusNot(name,3);
+        List<Course> courses = courseRepository.findCourseByNameContainingIgnoreCaseAndStatusNot(name, 3);
 
         // Sort result
-        if(priceAscending)
+        if (priceAscending)
             courses.sort(Comparator.comparing(Course::getPrice));
         else
             courses.sort(Comparator.comparing(Course::getPrice).reversed());
 
-        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {
+        }.getType());
     }
 
     public List<CourseResponse> getPurchasedCourses(UUID userId) {
         User user = userRepository.findById(userId.toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + userId));
+                () -> new RuntimeException("Can't find user with id " + userId));
 
-        List<Payment> payments = paymentRepository.findByUserAndStatus(user,3);
+        List<Payment> payments = paymentRepository.findByUserAndStatus(user, 3);
         List<Course> courses = payments.stream().map(Payment::getCourse).toList();
 
-        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {
+        }.getType());
     }
 
     public List<CourseResponse> getCoursesByInstructor(UUID instructorId) {
         User user = userRepository.findById(instructorId.toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + instructorId));
+                () -> new RuntimeException("Can't find user with id " + instructorId));
 
         List<Course> courses = courseRepository.findCourseByUser(user);
 
-        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {
+        }.getType());
     }
 
     @Transactional
     public CourseResponse updateCourse(UpdateCourseRequest request) {
         Course course = courseRepository.findById(request.getCourseId().toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + request.getCourseId().toString()));
+                () -> new RuntimeException("Can't find user with id " + request.getCourseId().toString()));
 
         // Load instructor
         Hibernate.initialize(course.getUser());
-        if(request.getName() != null && courseRepository.existsByNameAndUser(request.getName(),course.getUser()))
+        if (request.getName() != null && courseRepository.existsByNameAndUser(request.getName(), course.getUser()))
             throw new RuntimeException("This instructor has created a course with the same name");
 
         course.setUpdatedDate(new Date());
@@ -108,7 +113,7 @@ public class CourseService {
 
     public CourseResponse deleteCourse(UUID courseId) {
         Course course = courseRepository.findById(courseId.toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + courseId));
+                () -> new RuntimeException("Can't find user with id " + courseId));
 
         // Delete course -> change status to delete(3)
         course.setStatus(3);
@@ -119,14 +124,21 @@ public class CourseService {
 
     public CourseResponse actionOnCourse(UUID courseId, Action action) {
         Course course = courseRepository.findById(courseId.toString()).orElseThrow(
-                ()-> new NotFoundException("Can't find course with id " + courseId)
-        );
+                () -> new NotFoundException("Can't find course with id " + courseId));
 
-        if(course.getStatus() != 1) throw new BadRequestException("The course status is not 'Pending'");
+        if (course.getStatus() != 1)
+            throw new BadRequestException("The course status is not 'Pending'");
 
-        if(action.equals(Action.ACCEPT)) course.setStatus(2);
-        if(action.equals(Action.DECLINE)) course.setStatus(3);
+        if (action.equals(Action.ACCEPT))
+            course.setStatus(2);
+        if (action.equals(Action.DECLINE))
+            course.setStatus(3);
 
         return modelMapper.map(courseRepository.save(course), CourseResponse.class);
+    }
+
+    public Course getCourseById(String courseId) {
+        return courseRepository.findById(courseId.toString()).orElseThrow(
+                () -> new NotFoundException("Can't find course with id " + toString()));
     }
 }

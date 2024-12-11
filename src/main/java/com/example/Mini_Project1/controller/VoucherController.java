@@ -50,7 +50,7 @@ public class VoucherController {
     @GetMapping("get-by-code")
     @Operation(summary = "Get voucher by code")
     @ApiResponse(responseCode = "200", description = "Get successfully")
-    public  ResponseEntity<List<VoucherResponse>> getVoucherByCode(@RequestParam String code){
+    public ResponseEntity<VoucherResponse> getVoucherByCode(@RequestParam String code){
         return ResponseEntity.ok(voucherService.getVoucherByCodeService(code));
     }
 
