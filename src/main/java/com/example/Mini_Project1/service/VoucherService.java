@@ -25,12 +25,11 @@ public class VoucherService {
     private final ModelMapper modelMapper;
 
     @Transactional
-    //create voucher
-    public VoucherResponse createVoucherService(CreateVoucherRequest request){
-        if(voucherRepository.existsByCode(request.getCode().trim())){
+    // create voucher
+    public VoucherResponse createVoucherService(CreateVoucherRequest request) {
+        if (voucherRepository.existsByCode(request.getCode().trim())) {
             throw new RuntimeException("This voucher has already exist");
-        }
-        else {
+        } else {
             modelMapper.getConfiguration().setSkipNullEnabled(true);
             Voucher voucher = modelMapper.map(request, Voucher.class);
 
@@ -40,39 +39,39 @@ public class VoucherService {
 
     @Transactional
     // get all voucher
-    public List<VoucherResponse> getAllVouchersService(){
+    public List<VoucherResponse> getAllVouchersService() {
         List<Voucher> vouchers = voucherRepository.findAll();
-        return modelMapper.map(vouchers, new TypeToken<List<VoucherResponse>>() {}.getType());
+        return modelMapper.map(vouchers, new TypeToken<List<VoucherResponse>>() {
+        }.getType());
     }
 
     @Transactional
     // get by name
-    public List<VoucherResponse> getVoucherByNameService(String name){
-        if(name == null){
+    public List<VoucherResponse> getVoucherByNameService(String name) {
+        if (name == null) {
             List<Voucher> vouchers = voucherRepository.findAll();
-            return modelMapper.map(vouchers, new TypeToken<List<VoucherResponse>>() {}.getType());
+            return modelMapper.map(vouchers, new TypeToken<List<VoucherResponse>>() {
+            }.getType());
         }
         List<Voucher> vouchers = voucherRepository.findByName(name.trim());
-        return modelMapper.map(vouchers, new TypeToken<List<VoucherResponse>>() {}.getType());
+        return modelMapper.map(vouchers, new TypeToken<List<VoucherResponse>>() {
+        }.getType());
     }
 
     @Transactional
     // get by code
-    public List<VoucherResponse> getVoucherByCodeService(String code){
-        if(code == null){
-            List<Voucher> vouchers = voucherRepository.findAll();
-            return modelMapper.map(vouchers, new TypeToken<List<VoucherResponse>>() {}.getType());
-        }
-        List<Voucher> vouchers = voucherRepository.findByCode(code.trim());
-        return modelMapper.map(vouchers, new TypeToken<List<VoucherResponse>>() {}.getType());
+    public VoucherResponse getVoucherByCodeService(String code) {
+        Voucher voucher = voucherRepository.findByCode(code.trim()).stream().findFirst().orElseThrow(
+                () -> new RuntimeException("Voucher not found with code " + code.trim()));
+        return modelMapper.map(voucher, VoucherResponse.class);
     }
 
     @Transactional
     // update
-    public VoucherResponse updateVoucherService(UpdateVoucherRequest request){
+    public VoucherResponse updateVoucherService(UpdateVoucherRequest request) {
         Voucher voucher = voucherRepository.findById(request.getVoucherId().toString()).orElseThrow(
                 () -> new RuntimeException("Voucher not found with id " + request.getVoucherId().toString()));
-        if(request.getCode() != null && voucherRepository.existsByCode(request.getCode().trim())){
+        if (request.getCode() != null && voucherRepository.existsByCode(request.getCode().trim())) {
             throw new RuntimeException("This voucher has already exist");
         }
         modelMapper.getConfiguration().setSkipNullEnabled(true);
@@ -83,10 +82,11 @@ public class VoucherService {
 
     @Transactional
     // delete
-    public VoucherResponse deleteVoucherService(UUID voucherId){
-        Voucher voucher = voucherRepository.findById(voucherId.toString()).orElseThrow
-                (() -> new RuntimeException("Voucher not found with id " + voucherId.toString()));
+    public VoucherResponse deleteVoucherService(UUID voucherId) {
+        Voucher voucher = voucherRepository.findById(voucherId.toString())
+                .orElseThrow(() -> new RuntimeException("Voucher not found with id " + voucherId.toString()));
         voucherRepository.delete(voucher);
         return modelMapper.map(voucher, VoucherResponse.class);
     }
+
 }
