@@ -4,7 +4,6 @@ import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.Payment;
 import com.example.Mini_Project1.entity.User;
 import com.example.Mini_Project1.entity.Voucher;
-
 import java.util.List;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;

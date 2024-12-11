@@ -10,25 +10,27 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/carts")
 @AllArgsConstructor
 public class CartController {
-    private final CartService cartService;
+  private final CartService cartService;
 
-    @PostMapping("/add")
-    public ResponseEntity<CartResponse> addCourseToCart(@RequestParam String userId, @RequestParam String courseId) {
-        return ResponseEntity.ok(cartService.addCourseToCart(userId, courseId));
-    }
+  @PostMapping("/add")
+  public ResponseEntity<CartResponse> addCourseToCart(
+      @RequestParam String userId, @RequestParam String courseId) {
+    return ResponseEntity.ok(cartService.addCourseToCart(userId, courseId));
+  }
 
-    @DeleteMapping("/remove")
-    public ResponseEntity<CartResponse> removeCourseFromCart(@RequestParam String userId, @RequestParam String courseId) {
-        return ResponseEntity.ok(cartService.removeCourseFromCart(userId, courseId));
-    }
+  @DeleteMapping("/remove")
+  public ResponseEntity<CartResponse> removeCourseFromCart(
+      @RequestParam String userId, @RequestParam String courseId) {
+    return ResponseEntity.ok(cartService.removeCourseFromCart(userId, courseId));
+  }
 
-    @GetMapping("/{cartId}")
-    public ResponseEntity<CartResponse> getCart(@PathVariable String cartId) {
-        return ResponseEntity.ok(cartService.getCart(cartId));
-    }
+  @GetMapping("/{cartId}")
+  public ResponseEntity<CartResponse> getCart(@PathVariable String cartId) {
+    return ResponseEntity.ok(cartService.getCart(cartId));
+  }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<CartResponse> getCartByUserId(@PathVariable String userId) {
-        return ResponseEntity.ok(cartService.getCartByUserId(userId));
-    }
+  @GetMapping("/user/{userId}")
+  public ResponseEntity<CartResponse> getCartByUserId(@PathVariable String userId) {
+    return ResponseEntity.ok(cartService.getCartByUserId(userId));
+  }
 }
