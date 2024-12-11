@@ -3,8 +3,7 @@ package com.example.Mini_Project1.entity;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.tomcat.jni.Library;
-
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -39,6 +38,6 @@ public class Chapter {
   private Course course;
 
   // lesson
-  @OneToMany(mappedBy = "chapter")
+  @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Lesson> lessons;
 }
