@@ -9,7 +9,7 @@ import com.example.Mini_Project1.repository.UserRepository;
 import com.example.Mini_Project1.request.course.CommentRequest;
 import com.example.Mini_Project1.request.course.ReplyRequest;
 import com.example.Mini_Project1.request.course.UpdateCommentRequest;
-import com.example.Mini_Project1.response.CommentResponse;
+import com.example.Mini_Project1.response.course.CommentResponse;
 
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;

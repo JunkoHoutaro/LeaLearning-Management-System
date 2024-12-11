@@ -3,7 +3,7 @@ package com.example.Mini_Project1.controller;
 import com.example.Mini_Project1.request.course.CommentRequest;
 import com.example.Mini_Project1.request.course.ReplyRequest;
 import com.example.Mini_Project1.request.course.UpdateCommentRequest;
-import com.example.Mini_Project1.response.CommentResponse;
+import com.example.Mini_Project1.response.course.CommentResponse;
 import com.example.Mini_Project1.service.CommentService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
