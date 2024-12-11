@@ -65,7 +65,8 @@ public class CourseService {
         if(priceAscending) courses.sort(Comparator.comparing(Course::getPrice));
         else courses.sort(Comparator.comparing(Course::getPrice).reversed());
 
-        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {
+        }.getType());
     }
 
     public List<CourseResponse> getPurchasedCourses(UUID userId, PaymentStatus status) {
@@ -75,7 +76,8 @@ public class CourseService {
         List<Payment> payments = status == null ? paymentRepository.findByUser(user) : paymentRepository.findByUserAndStatus(user, status.getValue());
         List<Course> courses = payments.stream().map(Payment::getCourse).toList();
 
-        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
+        return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {
+        }.getType());
     }
 
     public List<CourseResponse> getCoursesByInstructor(UUID instructorId, CourseStatus status) {
@@ -115,13 +117,15 @@ public class CourseService {
 
     public CourseResponse actionOnCourse(UUID courseId, Action action) {
         Course course = courseRepository.findById(courseId.toString()).orElseThrow(
-                ()-> new NotFoundException("Can't find course with id " + courseId)
-        );
+                () -> new NotFoundException("Can't find course with id " + courseId));
 
-        if(course.getStatus() != 1) throw new BadRequestException("The course status is not 'Pending'");
+        if (course.getStatus() != 1)
+            throw new BadRequestException("The course status is not 'Pending'");
 
-        if(action.equals(Action.ACCEPT)) course.setStatus(2);
-        if(action.equals(Action.DECLINE)) course.setStatus(3);
+        if (action.equals(Action.ACCEPT))
+            course.setStatus(2);
+        if (action.equals(Action.DECLINE))
+            course.setStatus(3);
 
         return modelMapper.map(courseRepository.save(course), CourseResponse.class);
     }
@@ -134,5 +138,9 @@ public class CourseService {
         List<Payment> payments = status == null? paymentRepository.findByCourse(course) : paymentRepository.findByCourseAndStatus(course, status.getValue());
         List<User> users = payments.stream().map(Payment::getUser).toList();
         return modelMapper.map(users, new TypeToken<List<UserResponse>>() {}.getType());
+    }
+    public Course getCourseById(String courseId) {
+        return courseRepository.findById(courseId.toString()).orElseThrow(
+                () -> new NotFoundException("Can't find course with id " + toString()));
     }
 }
