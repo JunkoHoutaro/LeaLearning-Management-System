@@ -4,6 +4,8 @@ import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.Payment;
 import com.example.Mini_Project1.entity.User;
 import com.example.Mini_Project1.enums.Action;
+import com.example.Mini_Project1.enums.CourseStatus;
+import com.example.Mini_Project1.enums.PaymentStatus;
 import com.example.Mini_Project1.exception.BadRequestException;
 import com.example.Mini_Project1.exception.NotFoundException;
 import com.example.Mini_Project1.repository.CourseRepository;
@@ -12,6 +14,7 @@ import com.example.Mini_Project1.repository.UserRepository;
 import com.example.Mini_Project1.request.course.CreateCourseRequest;
 import com.example.Mini_Project1.request.course.UpdateCourseRequest;
 import com.example.Mini_Project1.response.course.CourseResponse;
+import com.example.Mini_Project1.response.user.UserResponse;
 import jakarta.transaction.Transactional;
 import java.util.Comparator;
 import java.util.Date;
@@ -34,10 +37,10 @@ public class CourseService {
     @Transactional
     public CourseResponse createCourse(CreateCourseRequest request) {
         User user = userRepository.findById(request.getUserId().toString()).orElseThrow
-                (()-> new RuntimeException("Can't find user with id " + request.getUserId().toString()));
+                (()-> new NotFoundException("Can't find user with id " + request.getUserId().toString()));
 
         if(courseRepository.existsByNameAndUser(request.getName(), user))
-            throw new RuntimeException("This instructor has created a course with the same name");
+            throw new BadRequestException("This instructor has created a course with the same name");
 
         Course course = modelMapper.map(request, Course.class);
         course.setUser(user);
@@ -48,57 +51,50 @@ public class CourseService {
         return modelMapper.map(courseRepository.save(course), CourseResponse.class);
     }
 
-    public List<CourseResponse> getCoursesByStatus(Integer status) {
-        if(status == null) {
-            List<Course> courses = courseRepository.findAll();
-            return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
-        }
-
-        List<Course> courses = courseRepository.findCourseByStatus(status);
+    public List<CourseResponse> getCoursesByStatus(CourseStatus status) {
+        List<Course> courses = status == null? courseRepository.findAll() : courseRepository.findCourseByStatus(status.getValue());
         return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
     }
 
-    public List<CourseResponse> searchCourses(String name, boolean priceAscending) {
-        // Exclude deleted course
-        List<Course> courses = courseRepository.findCourseByNameContainingIgnoreCaseAndStatusNot(name,3);
+    public List<CourseResponse> searchCourses(String name, CourseStatus courseStatus, boolean priceAscending) {
+        List<Course> courses = courseStatus == null?
+                courseRepository.findCourseByNameContainingIgnoreCase(name) :
+                courseRepository.findCourseByNameContainingIgnoreCaseAndStatus(name,courseStatus.getValue());
 
         // Sort result
-        if(priceAscending)
-            courses.sort(Comparator.comparing(Course::getPrice));
-        else
-            courses.sort(Comparator.comparing(Course::getPrice).reversed());
+        if(priceAscending) courses.sort(Comparator.comparing(Course::getPrice));
+        else courses.sort(Comparator.comparing(Course::getPrice).reversed());
 
         return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
     }
 
-    public List<CourseResponse> getPurchasedCourses(UUID userId) {
+    public List<CourseResponse> getPurchasedCourses(UUID userId, PaymentStatus status) {
         User user = userRepository.findById(userId.toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + userId));
+                ()-> new NotFoundException("Can't find user with id " + userId));
 
-        List<Payment> payments = paymentRepository.findByUserAndStatus(user,3);
+        List<Payment> payments = status == null ? paymentRepository.findByUser(user) : paymentRepository.findByUserAndStatus(user, status.getValue());
         List<Course> courses = payments.stream().map(Payment::getCourse).toList();
 
         return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
     }
 
-    public List<CourseResponse> getCoursesByInstructor(UUID instructorId) {
+    public List<CourseResponse> getCoursesByInstructor(UUID instructorId, CourseStatus status) {
         User user = userRepository.findById(instructorId.toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + instructorId));
+                ()-> new NotFoundException("Can't find user with id " + instructorId));
 
-        List<Course> courses = courseRepository.findCourseByUser(user);
-
+        List<Course> courses = status == null? courseRepository.findCourseByUser(user) : courseRepository.findCourseByUserAndStatus(user, status.getValue());
         return modelMapper.map(courses, new TypeToken<List<CourseResponse>>() {}.getType());
     }
 
     @Transactional
     public CourseResponse updateCourse(UpdateCourseRequest request) {
         Course course = courseRepository.findById(request.getCourseId().toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + request.getCourseId().toString()));
+                ()-> new NotFoundException("Can't find user with id " + request.getCourseId().toString()));
 
         // Load instructor
         Hibernate.initialize(course.getUser());
         if(request.getName() != null && courseRepository.existsByNameAndUser(request.getName(),course.getUser()))
-            throw new RuntimeException("This instructor has created a course with the same name");
+            throw new BadRequestException("This instructor has created a course with the same name");
 
         course.setUpdatedDate(new Date());
         modelMapper.map(request, course);
@@ -108,7 +104,7 @@ public class CourseService {
 
     public CourseResponse deleteCourse(UUID courseId) {
         Course course = courseRepository.findById(courseId.toString()).orElseThrow(
-                ()-> new RuntimeException("Can't find user with id " + courseId));
+                ()-> new NotFoundException("Can't find user with id " + courseId));
 
         // Delete course -> change status to delete(3)
         course.setStatus(3);
@@ -128,5 +124,15 @@ public class CourseService {
         if(action.equals(Action.DECLINE)) course.setStatus(3);
 
         return modelMapper.map(courseRepository.save(course), CourseResponse.class);
+    }
+
+    public List<UserResponse> getStudentsEnroll(UUID courseId, PaymentStatus status) {
+        Course course = courseRepository.findById(courseId.toString()).orElseThrow(
+                () -> new NotFoundException("Can't find course with id " + courseId)
+        );
+
+        List<Payment> payments = status == null? paymentRepository.findByCourse(course) : paymentRepository.findByCourseAndStatus(course, status.getValue());
+        List<User> users = payments.stream().map(Payment::getUser).toList();
+        return modelMapper.map(users, new TypeToken<List<UserResponse>>() {}.getType());
     }
 }

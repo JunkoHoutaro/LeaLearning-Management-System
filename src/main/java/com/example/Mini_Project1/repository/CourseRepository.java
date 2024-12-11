@@ -8,10 +8,9 @@ import java.util.List;
 
 public interface CourseRepository extends JpaRepository<Course, String> {
   List<Course> findCourseByStatus(int status);
-
-  List<Course> findCourseByNameContainingIgnoreCaseAndStatusNot(String name, int status);
-
+  List<Course> findCourseByNameContainingIgnoreCase(String name);
+  List<Course> findCourseByNameContainingIgnoreCaseAndStatus(String name, int status);
   List<Course> findCourseByUser(User user);
-
+  List<Course> findCourseByUserAndStatus(User user, int status);
   boolean existsByNameAndUser(String name, User user);
 }
