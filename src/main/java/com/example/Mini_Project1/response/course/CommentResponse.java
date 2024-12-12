@@ -1,5 +1,4 @@
-package com.example.Mini_Project1.response;
-import com.example.Mini_Project1.entity.Comment;
+package com.example.Mini_Project1.response.course;
 import lombok.Data;
 
 import java.util.Date;

@@ -105,28 +105,28 @@ public class UserService {
   }
 
   @Transactional
-  public UserResponse updateUser(String id, UpdateUserRequest updateUserRequest) {
+public UserResponse updateUser(String id, UpdateUserRequest updateUserRequest) {
     User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
 
     if (updateUserRequest.getName() != null) {
-      user.setName(updateUserRequest.getName());
+        user.setName(updateUserRequest.getName());
     }
     if (updateUserRequest.getEmail() != null) {
-      user.setEmail(updateUserRequest.getEmail());
+        user.setEmail(updateUserRequest.getEmail());
     }
     if (updateUserRequest.getDob() != null) {
-      user.setDob(updateUserRequest.getDob());
+        user.setDob(updateUserRequest.getDob());
     }
     if (updateUserRequest.getPassword() != null && !updateUserRequest.getPassword().isEmpty()) {
-      user.setPassword(passwordEncoder.encode(updateUserRequest.getPassword()));
+        user.setPassword(passwordEncoder.encode(updateUserRequest.getPassword()));
     }
     if (updateUserRequest.getRole() != null) {
-      user.setRole(updateUserRequest.getRole());
+        user.setRole(updateUserRequest.getRole());
     }
     user.setUpdatedDate(new Date());
 
     return modelMapper.map(userRepository.save(user), UserResponse.class);
-  }
+}
 
   @Transactional
   public void deleteUser(String id) {
