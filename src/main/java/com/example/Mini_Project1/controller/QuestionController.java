@@ -40,14 +40,6 @@ public class QuestionController {
         return ResponseEntity.ok(questionService.getAllQuestionsService(quizzId));
     }
 
-    // search by correct status
-    @GetMapping("get-by-correct")
-    @Operation(summary = "Search a question by correct status")
-    @ApiResponse(responseCode = "200", description = "Get successfully")
-    public ResponseEntity<List<QuestionResponse>> getQuestionByCorrect(@RequestParam UUID quizzId, @RequestParam Character correct) {
-        return ResponseEntity.ok(questionService.getQuestionByCorrectService(quizzId, correct));
-    }
-
     // update
     @PatchMapping("update")
     @Operation(summary = "Update  a question")
