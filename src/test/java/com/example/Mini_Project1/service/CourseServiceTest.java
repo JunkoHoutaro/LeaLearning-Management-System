@@ -2,6 +2,7 @@ package com.example.Mini_Project1.service;
 
 import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.User;
+import com.example.Mini_Project1.enums.CourseStatus;
 import com.example.Mini_Project1.exception.BadRequestException;
 import com.example.Mini_Project1.exception.NotFoundException;
 import com.example.Mini_Project1.repository.CourseRepository;
@@ -16,10 +17,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeToken;
 
-import java.util.Date;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -114,5 +114,45 @@ public class CourseServiceTest {
         });
 
         assertEquals("This instructor has created a course with the same name", exception.getMessage());
+    }
+
+    @Test
+    public void testGetCoursesByStatus_whenStatusIsNull(){
+        List<Course> mockCourses = new ArrayList<>();
+        mockCourses.add(new Course());
+        mockCourses.add(course);
+
+        when(courseRepository.findAll()).thenReturn(mockCourses);
+
+        List<CourseResponse> mockResponses = new ArrayList<>();
+        mockResponses.add(new CourseResponse());
+        mockResponses.add(expectedResponse);
+
+        when(modelMapper.map(mockCourses, new TypeToken<List<CourseResponse>>(){}.getType())).thenReturn(mockResponses);
+
+        List<CourseResponse> result = courseService.getCoursesByStatus(null);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("Math", result.get(1).getName());
+    }
+
+    @Test
+    void testGetCoursesByStatus_whenStatusIsNotNull() {
+        List<Course> mockCourses = new ArrayList<>();
+        mockCourses.add(course);
+
+        when(courseRepository.findCourseByStatus(1)).thenReturn(mockCourses);
+
+        List<CourseResponse> mockResponse = new ArrayList<>();
+        mockResponse.add(expectedResponse);
+
+        when(modelMapper.map(mockCourses, new TypeToken<List<CourseResponse>>(){}.getType())).thenReturn(mockResponse);
+
+        List<CourseResponse> result = courseService.getCoursesByStatus(CourseStatus.PENDING);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Math", result.getFirst().getName());
     }
 }
