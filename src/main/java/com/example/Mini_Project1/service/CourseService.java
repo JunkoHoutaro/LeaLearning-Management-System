@@ -106,7 +106,7 @@ public class CourseService {
 
     public CourseResponse deleteCourse(UUID courseId) {
         Course course = courseRepository.findById(courseId.toString()).orElseThrow(
-                ()-> new NotFoundException("Can't find user with id " + courseId));
+                ()-> new NotFoundException("Can't find course with id " + courseId));
 
         // Delete course -> change status to delete(3)
         course.setStatus(3);

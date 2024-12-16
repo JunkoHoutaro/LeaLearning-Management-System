@@ -479,4 +479,27 @@ public class CourseServiceTest {
         assertEquals("This instructor has created a course with the same name", exception.getMessage());
     }
 
+    @Test
+    public void testDeleteCourse_success() {
+        expectedResponse.setStatus(3);
+
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+        when(courseRepository.save(course)).thenReturn(course);
+        when(modelMapper.map(course, CourseResponse.class)).thenReturn(expectedResponse);
+
+        CourseResponse result = courseService.deleteCourse(UUID.fromString(course.getId()));
+
+        assertEquals(expectedResponse, result);
+    }
+
+    @Test
+    public void testDeleteCourse_courseNotFound() {
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(NotFoundException.class, () -> {
+            courseService.deleteCourse(UUID.fromString(course.getId()));
+        });
+
+        assertEquals("Can't find course with id " + course.getId(), exception.getMessage());
+    }
 }
