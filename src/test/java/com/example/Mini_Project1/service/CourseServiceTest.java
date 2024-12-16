@@ -257,4 +257,44 @@ public class CourseServiceTest {
         Exception exception = assertThrows(NotFoundException.class, () -> courseService.getPurchasedCourses(UUID.fromString(user.getId()), null));
         assertEquals("Can't find user with id " + user.getId(), exception.getMessage());
     }
+
+    @Test
+    public void testGetCoursesByInstructor_whenStatusIsNull() {
+        List<Course> mockCourses = List.of(course);
+        List<CourseResponse> mockCourseResponses = List.of(expectedResponse);
+
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(courseRepository.findCourseByUser(user)).thenReturn(mockCourses);
+        when(modelMapper.map(mockCourses, new TypeToken<List<CourseResponse>>() {}.getType())).thenReturn(mockCourseResponses);
+
+        List<CourseResponse> result = courseService.getCoursesByInstructor(UUID.fromString(user.getId()), null);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Math", result.getFirst().getName());
+    }
+
+    @Test
+    public void testGetCoursesByInstructor_whenStatusIsNotNull() {
+        List<Course> mockCourses = List.of(course);
+        List<CourseResponse> mockCourseResponses = List.of(expectedResponse);
+
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(courseRepository.findCourseByUserAndStatus(user, 1)).thenReturn(mockCourses);
+        when(modelMapper.map(mockCourses, new TypeToken<List<CourseResponse>>() {}.getType())).thenReturn(mockCourseResponses);
+
+        List<CourseResponse> result = courseService.getCoursesByInstructor(UUID.fromString(user.getId()), CourseStatus.PENDING);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Math", result.getFirst().getName());
+    }
+
+    @Test
+    public void testGetCoursesByInstructor_notFound() {
+        when(userRepository.findById(user.getId())).thenReturn(Optional.empty());
+        Exception exception = assertThrows(NotFoundException.class,
+                () -> courseService.getCoursesByInstructor(UUID.fromString(user.getId()), null));
+        assertEquals("Can't find user with id " + user.getId(), exception.getMessage());
+    }
 }
