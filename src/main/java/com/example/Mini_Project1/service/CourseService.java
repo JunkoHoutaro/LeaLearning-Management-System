@@ -140,7 +140,7 @@ public class CourseService {
         return modelMapper.map(users, new TypeToken<List<UserResponse>>() {}.getType());
     }
     public Course getCourseById(String courseId) {
-        return courseRepository.findById(courseId.toString()).orElseThrow(
-                () -> new NotFoundException("Can't find course with id " + toString()));
+        return courseRepository.findById(courseId).orElseThrow(
+                () -> new NotFoundException("Can't find course with id " + courseId));
     }
 }
