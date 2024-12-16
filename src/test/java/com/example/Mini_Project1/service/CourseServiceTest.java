@@ -297,4 +297,29 @@ public class CourseServiceTest {
                 () -> courseService.getCoursesByInstructor(UUID.fromString(user.getId()), null));
         assertEquals("Can't find user with id " + user.getId(), exception.getMessage());
     }
+
+    @Test
+    public void testGetCourseById_success() {
+        Course mockCourse = new Course();
+        mockCourse.setName("PE");
+        mockCourse.setId("C01");
+
+        when(courseRepository.findById("C01")).thenReturn(Optional.of(mockCourse));
+
+        Course foundCourse = courseService.getCourseById("C01");
+
+        assertNotNull(foundCourse);
+        assertEquals("PE", foundCourse.getName());
+    }
+
+    @Test
+    public void testGetCourseById_notFound() {
+        when(courseRepository.findById("C01")).thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(NotFoundException.class, () -> {
+            courseService.getCourseById("C01");
+        });
+
+        assertEquals("Can't find course with id C01", exception.getMessage());
+    }
 }
