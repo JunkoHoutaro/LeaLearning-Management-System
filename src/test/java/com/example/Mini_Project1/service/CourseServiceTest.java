@@ -12,6 +12,7 @@ import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.repository.PaymentRepository;
 import com.example.Mini_Project1.repository.UserRepository;
 import com.example.Mini_Project1.request.course.CreateCourseRequest;
+import com.example.Mini_Project1.request.course.UpdateCourseRequest;
 import com.example.Mini_Project1.response.course.CourseResponse;
 import com.example.Mini_Project1.response.user.UserResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,7 @@ import org.modelmapper.TypeToken;
 
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,6 +50,7 @@ public class CourseServiceTest {
     private Course course;
     private Payment payment;
     private CreateCourseRequest createCourseRequest;
+    private UpdateCourseRequest updateCourseRequest;
     private CourseResponse expectedResponse;
 
     @BeforeEach
@@ -57,14 +60,8 @@ public class CourseServiceTest {
         user.setName("John");
         user.setEmail("john@gmail.com");
 
-        createCourseRequest = new CreateCourseRequest(
-                UUID.fromString("2cd97901-4ba5-4a45-8628-6b30108a6f35"),
-                "Math",
-                100f,
-                0.3f
-        );
-
         course = new Course();
+        course.setId("887d1424-48da-4ba9-ae08-d67832ed9759");
         course.setName("Math");
         course.setPrice(100f);
         course.setDiscount(0.3f);
@@ -74,6 +71,7 @@ public class CourseServiceTest {
         course.setStatus(1);
 
         expectedResponse = new CourseResponse();
+        expectedResponse.setId("887d1424-48da-4ba9-ae08-d67832ed9759");
         expectedResponse.setName("Math");
         expectedResponse.setPrice(100f);
         expectedResponse.setDiscount(0.3f);
@@ -90,6 +88,17 @@ public class CourseServiceTest {
         payment.setUser(user);
         payment.setPrice(100f);
         payment.setDiscount(0.1f);
+
+        createCourseRequest = new CreateCourseRequest(
+                UUID.fromString("2cd97901-4ba5-4a45-8628-6b30108a6f35"),
+                "Math",
+                100f,
+                0.3f
+        );
+
+        updateCourseRequest = new UpdateCourseRequest();
+        updateCourseRequest.setCourseId(UUID.fromString(course.getId()));
+        updateCourseRequest.setName("Updated name");
     }
 
     @Test
@@ -118,7 +127,7 @@ public class CourseServiceTest {
     }
 
     @Test
-    public void testCreateCourse_badRequest() {
+    public void testCreateCourse_duplicateName() {
         when(userRepository.findById(createCourseRequest.getUserId().toString())).thenReturn(Optional.of(user));
         when(courseRepository.existsByNameAndUser(createCourseRequest.getName(), user)).thenReturn(true);
 
@@ -301,34 +310,29 @@ public class CourseServiceTest {
 
     @Test
     public void testGetCourseById_success() {
-        Course mockCourse = new Course();
-        mockCourse.setName("PE");
-        mockCourse.setId("C01");
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
 
-        when(courseRepository.findById("C01")).thenReturn(Optional.of(mockCourse));
-
-        Course foundCourse = courseService.getCourseById("C01");
+        Course foundCourse = courseService.getCourseById(course.getId());
 
         assertNotNull(foundCourse);
-        assertEquals("PE", foundCourse.getName());
+        assertEquals("Math", foundCourse.getName());
     }
 
     @Test
     public void testGetCourseById_notFound() {
-        when(courseRepository.findById("C01")).thenReturn(Optional.empty());
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(NotFoundException.class, () -> {
-            courseService.getCourseById("C01");
+            courseService.getCourseById(course.getId());
         });
 
-        assertEquals("Can't find course with id C01", exception.getMessage());
+        assertEquals("Can't find course with id " + course.getId(), exception.getMessage());
     }
 
     @Test
     public void testGetStudentsEnroll_whenStatusIsNotNull() {
         UserResponse mockUserResponse = new UserResponse();
         mockUserResponse.setName("John");
-        course.setId(UUID.randomUUID().toString());
 
         List<Payment> mockPayments = Collections.singletonList(payment);
         List<User> mockUsers = mockPayments.stream().map(Payment::getUser).toList();
@@ -349,7 +353,6 @@ public class CourseServiceTest {
     public void testGetStudentsEnroll_whenStatusIsNull() {
         UserResponse mockUserResponse = new UserResponse();
         mockUserResponse.setName("John");
-        course.setId(UUID.randomUUID().toString());
 
         List<Payment> mockPayments = Collections.singletonList(payment);
         List<User> mockUsers = mockPayments.stream().map(Payment::getUser).toList();
@@ -368,20 +371,17 @@ public class CourseServiceTest {
 
     @Test
     public void testGetStudentsEnroll_notFound() {
-        UUID courseId = UUID.randomUUID();
-        when(courseRepository.findById(courseId.toString())).thenReturn(Optional.empty());
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(NotFoundException.class, () -> {
-            courseService.getStudentsEnroll(courseId, null);
+            courseService.getStudentsEnroll(UUID.fromString(course.getId()), null);
         });
 
-        assertEquals("Can't find course with id " + courseId, exception.getMessage());
+        assertEquals("Can't find course with id " + course.getId(), exception.getMessage());
     }
 
     @Test
     public void testActionOnCourse_acceptAction() {
-        course.setId(UUID.randomUUID().toString());
-        expectedResponse.setId(course.getId());
         expectedResponse.setStatus(2);
 
         when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
@@ -398,8 +398,6 @@ public class CourseServiceTest {
 
     @Test
     public void testActionOnCourse_declineAction() {
-        course.setId(UUID.randomUUID().toString());
-        expectedResponse.setId(course.getId());
         expectedResponse.setStatus(3);
 
         when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
@@ -416,19 +414,17 @@ public class CourseServiceTest {
 
     @Test
     public void testActionOnCourse_notFound() {
-        UUID courseId = UUID.randomUUID();
-        when(courseRepository.findById(courseId.toString())).thenReturn(Optional.empty());
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(NotFoundException.class, () -> {
-            courseService.actionOnCourse(courseId, Action.ACCEPT);
+            courseService.actionOnCourse(UUID.fromString(course.getId()), Action.ACCEPT);
         });
 
-        assertEquals("Can't find course with id " + courseId, exception.getMessage());
+        assertEquals("Can't find course with id " + course.getId(), exception.getMessage());
     }
 
     @Test
-    public void testActionOnCourse_badRequest() {
-        course.setId(UUID.randomUUID().toString());
+    public void testActionOnCourse_invalidStatus() {
         course.setStatus(2);
 
         when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
@@ -438,6 +434,49 @@ public class CourseServiceTest {
         });
 
         assertEquals("The course status is not 'Pending'", exception.getMessage());
+    }
+
+    @Test
+    public void testUpdateCourse_success() {
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+        when(courseRepository.existsByNameAndUser(updateCourseRequest.getName(), user)).thenReturn(false);
+        when(courseRepository.save(course)).thenReturn(course);
+
+        course.setName(updateCourseRequest.getName());
+        expectedResponse.setName(updateCourseRequest.getName());
+
+        doNothing().when(modelMapper).map(updateCourseRequest, course);
+        when(courseRepository.save(course)).thenReturn(course);
+        when(modelMapper.map(course, CourseResponse.class)).thenReturn(expectedResponse);
+
+        CourseResponse result = courseService.updateCourse(updateCourseRequest);
+
+        assertNotNull(result);
+        assertEquals("Updated name", result.getName());
+        assertEquals(course.getId(), result.getId());
+    }
+
+    @Test
+    public void testUpdateCourse_notFound() {
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(NotFoundException.class, () -> {
+            courseService.updateCourse(updateCourseRequest);
+        });
+
+        assertEquals("Can't find course with id " + course.getId(), exception.getMessage());
+    }
+
+    @Test
+    public void testUpdateCourse_duplicateName() {
+        when(courseRepository.findById(updateCourseRequest.getCourseId().toString())).thenReturn(Optional.of(course));
+        when(courseRepository.existsByNameAndUser(updateCourseRequest.getName(),user)).thenReturn(true);
+
+        Exception exception = assertThrows(BadRequestException.class, () -> {
+            courseService.updateCourse(updateCourseRequest);
+        });
+
+        assertEquals("This instructor has created a course with the same name", exception.getMessage());
     }
 
 }

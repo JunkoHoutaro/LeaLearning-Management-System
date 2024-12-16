@@ -91,7 +91,7 @@ public class CourseService {
     @Transactional
     public CourseResponse updateCourse(UpdateCourseRequest request) {
         Course course = courseRepository.findById(request.getCourseId().toString()).orElseThrow(
-                ()-> new NotFoundException("Can't find user with id " + request.getCourseId().toString()));
+                ()-> new NotFoundException("Can't find course with id " + request.getCourseId().toString()));
 
         // Load instructor
         Hibernate.initialize(course.getUser());
