@@ -3,6 +3,7 @@ package com.example.Mini_Project1.service;
 import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.Payment;
 import com.example.Mini_Project1.entity.User;
+import com.example.Mini_Project1.enums.Action;
 import com.example.Mini_Project1.enums.CourseStatus;
 import com.example.Mini_Project1.enums.PaymentStatus;
 import com.example.Mini_Project1.exception.BadRequestException;
@@ -376,4 +377,67 @@ public class CourseServiceTest {
 
         assertEquals("Can't find course with id " + courseId, exception.getMessage());
     }
+
+    @Test
+    public void testActionOnCourse_acceptAction() {
+        course.setId(UUID.randomUUID().toString());
+        expectedResponse.setId(course.getId());
+        expectedResponse.setStatus(2);
+
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+        when(courseRepository.save(course)).thenReturn(course);
+        when(modelMapper.map(course, CourseResponse.class)).thenReturn(expectedResponse);
+
+        CourseResponse result = courseService.actionOnCourse(UUID.fromString(course.getId()), Action.ACCEPT);
+
+        assertNotNull(result);
+        assertEquals(2, result.getStatus());
+        assertEquals(course.getId(), result.getId());
+        assertEquals(course.getName(), result.getName());
+    }
+
+    @Test
+    public void testActionOnCourse_declineAction() {
+        course.setId(UUID.randomUUID().toString());
+        expectedResponse.setId(course.getId());
+        expectedResponse.setStatus(3);
+
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+        when(courseRepository.save(course)).thenReturn(course);
+        when(modelMapper.map(course, CourseResponse.class)).thenReturn(expectedResponse);
+
+        CourseResponse result = courseService.actionOnCourse(UUID.fromString(course.getId()), Action.DECLINE);
+
+        assertNotNull(result);
+        assertEquals(3, result.getStatus());
+        assertEquals(course.getId(), result.getId());
+        assertEquals(course.getName(), result.getName());
+    }
+
+    @Test
+    public void testActionOnCourse_notFound() {
+        UUID courseId = UUID.randomUUID();
+        when(courseRepository.findById(courseId.toString())).thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(NotFoundException.class, () -> {
+            courseService.actionOnCourse(courseId, Action.ACCEPT);
+        });
+
+        assertEquals("Can't find course with id " + courseId, exception.getMessage());
+    }
+
+    @Test
+    public void testActionOnCourse_badRequest() {
+        course.setId(UUID.randomUUID().toString());
+        course.setStatus(2);
+
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+
+        Exception exception = assertThrows(BadRequestException.class, () -> {
+            courseService.actionOnCourse(UUID.fromString(course.getId()), Action.ACCEPT);
+        });
+
+        assertEquals("The course status is not 'Pending'", exception.getMessage());
+    }
+
 }
