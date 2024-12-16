@@ -1,8 +1,10 @@
 package com.example.Mini_Project1.service;
 
 import com.example.Mini_Project1.entity.Course;
+import com.example.Mini_Project1.entity.Payment;
 import com.example.Mini_Project1.entity.User;
 import com.example.Mini_Project1.enums.CourseStatus;
+import com.example.Mini_Project1.enums.PaymentStatus;
 import com.example.Mini_Project1.exception.BadRequestException;
 import com.example.Mini_Project1.exception.NotFoundException;
 import com.example.Mini_Project1.repository.CourseRepository;
@@ -43,6 +45,7 @@ public class CourseServiceTest {
 
     private User user;
     private Course course;
+    private Payment payment;
     private CreateCourseRequest createCourseRequest;
     private CourseResponse expectedResponse;
 
@@ -77,6 +80,15 @@ public class CourseServiceTest {
         expectedResponse.setUpdatedDate(course.getUpdatedDate());
         expectedResponse.setStatus(1);
         expectedResponse.setUserId(user.getId());
+
+        payment = new Payment();
+        payment.setStatus(3);
+        payment.setCreatedDate(new Date());
+        payment.setUpdatedDate(new Date());
+        payment.setCourse(course);
+        payment.setUser(user);
+        payment.setPrice(100f);
+        payment.setDiscount(0.1f);
     }
 
     @Test
@@ -137,7 +149,7 @@ public class CourseServiceTest {
     }
 
     @Test
-    void testGetCoursesByStatus_whenStatusIsNotNull() {
+    public void testGetCoursesByStatus_whenStatusIsNotNull() {
         List<Course> mockCourses = new ArrayList<>();
         mockCourses.add(course);
 
@@ -156,7 +168,7 @@ public class CourseServiceTest {
     }
 
     @Test
-    void testSearchCourses_whenStatusIsNull() {
+    public void testSearchCourses_whenStatusIsNull() {
         String name = "math";
 
         Course mockCourse = new Course();
@@ -189,7 +201,7 @@ public class CourseServiceTest {
     }
 
     @Test
-    void testSearchCourses_whenCourseStatusIsNotNull() {
+    public void testSearchCourses_whenStatusIsNotNull() {
         String name = "math";
 
         List<Course> mockCourses = Collections.singletonList(course);
@@ -203,5 +215,46 @@ public class CourseServiceTest {
         assertNotNull(result);
         assertEquals(1, result.size());
         assertEquals("Math", result.getFirst().getName());
+    }
+
+    @Test
+    public void testGetPurchasedCourses_whenStatusIsNull() {
+        List<Payment> mockPayments = Collections.singletonList(payment);
+        List<Course> mockCourses = mockPayments.stream().map(Payment::getCourse).toList();
+        List<CourseResponse> mockCourseResponses = Collections.singletonList(expectedResponse);
+
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(paymentRepository.findByUser(user)).thenReturn(mockPayments);
+        when(modelMapper.map(mockCourses, new TypeToken<List<CourseResponse>>() {}.getType())).thenReturn(mockCourseResponses);
+
+        List<CourseResponse> result = courseService.getPurchasedCourses(UUID.fromString(user.getId()), null);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Math", result.getFirst().getName());
+    }
+
+    @Test
+    public void testGetPurchasedCourses_whenStatusIsNotNull() {
+        List<Payment> mockPayments = Collections.singletonList(payment);
+        List<Course> mockCourses = mockPayments.stream().map(Payment::getCourse).toList();
+        List<CourseResponse> mockCourseResponses = Collections.singletonList(expectedResponse);
+
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(paymentRepository.findByUserAndStatus(user,3)).thenReturn(mockPayments);
+        when(modelMapper.map(mockCourses, new TypeToken<List<CourseResponse>>() {}.getType())).thenReturn(mockCourseResponses);
+
+        List<CourseResponse> result = courseService.getPurchasedCourses(UUID.fromString(user.getId()), PaymentStatus.SUCCESS);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Math", result.getFirst().getName());
+    }
+
+    @Test
+    public void testGetPurchasedCourses_notFound() {
+        when(userRepository.findById(user.getId())).thenReturn(Optional.empty());
+        Exception exception = assertThrows(NotFoundException.class, () -> courseService.getPurchasedCourses(UUID.fromString(user.getId()), null));
+        assertEquals("Can't find user with id " + user.getId(), exception.getMessage());
     }
 }
