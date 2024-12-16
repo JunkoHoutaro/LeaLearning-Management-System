@@ -33,21 +33,14 @@ public class RatingController {
         return ResponseEntity.ok(ratingService.createRating(request));
     }
 
-    @GetMapping("/rating/{ratingId}")
-    public ResponseEntity<CourseRatingResponse> getRatingsByRatingId(
-            @PathVariable String ratingId) {
-        CourseRatingResponse courseRatingResponse = ratingService.getRatingsByRatingId(ratingId);
+    @GetMapping("/course/{courseId}")
+    @Operation(summary = "Get ratings by course ID", description = "Get average rating and all ratings for a course by its ID.")
+    @ApiResponse(responseCode = "200", description = "Ratings retrieved successfully")
+    @ApiResponse(responseCode = "404", description = "Course not found")
+    public ResponseEntity<CourseRatingResponse> getRatingsByCourseId(
+            @PathVariable String courseId) {
+        CourseRatingResponse courseRatingResponse = ratingService.getRatingsByCourseId(courseId);
         return ResponseEntity.ok(courseRatingResponse);
-    }
-
-    @PatchMapping("/rating/{id}")
-    @Operation(summary = "Update a rating", description = "Update specific fields of an existing rating and save the old version into history.")
-    @ApiResponse(responseCode = "200", description = "Rating updated successfully")
-    public ResponseEntity<RatingResponse> partiallyUpdateRating(
-            @PathVariable String id,
-            @RequestBody RatingUpdateRequest request) {
-        RatingResponse ratingResponse = ratingService.updateRating(id, request);
-        return ResponseEntity.ok(ratingResponse);
     }
 
     @DeleteMapping("/{id}")
@@ -59,5 +52,4 @@ public class RatingController {
         RatingResponse deletedRating = ratingService.deleteRating(id);
         return ResponseEntity.ok(deletedRating);
     }
-
 }

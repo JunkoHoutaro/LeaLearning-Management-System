@@ -13,6 +13,7 @@ public class RatingResponse {
     private String feedback;
     private String courseName;
     private String userName;
+    private String userId;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createdDate;

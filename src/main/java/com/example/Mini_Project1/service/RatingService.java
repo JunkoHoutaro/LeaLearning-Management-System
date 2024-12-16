@@ -45,67 +45,72 @@ public class RatingService {
                 .orElseThrow(() -> new RuntimeException("Course not found!"));
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found!"));
-
-        Rating rating = Rating.builder()
-                .course(course)
-                .user(user)
-                .rating(request.getRating())
-                .feedback(request.getFeedback())
-                .createdDate(new Date())
-                .build();
-        ratingRepository.save(rating);
-
-        return mapToResponse(rating);
-    }
-
-    public CourseRatingResponse getRatingsByRatingId(String ratingId) {
-        Rating rating = ratingRepository.findById(ratingId)
-                .orElseThrow(() -> new RuntimeException("Rating not found!"));
-        Course course = rating.getCourse();
-        List<Course> courses = ratingCourseRepository.findByName(course.getName());
-        if (courses.isEmpty()) {
-            return CourseRatingResponse.builder()
-                    .courseName(course.getName())
-                    .averageRating(0.0)
-                    // giống
-                    .ratings(List.of(mapToRatingResponse(rating)))
+    
+        Optional<Rating> existingRatingOpt = ratingRepository.findByCourseAndUser(course, user);
+        
+        if (existingRatingOpt.isPresent()) {
+            Rating existingRating = existingRatingOpt.get();
+    
+            existingRating.setRating(request.getRating());
+            existingRating.setFeedback(request.getFeedback());
+            existingRating.setCreatedDate(new Date());
+            ratingRepository.save(existingRating);
+    
+            RatingHistory newHistory = RatingHistory.builder()
+                    .course(existingRating.getCourse())
+                    .user(existingRating.getUser())
+                    .rating(request.getRating())
+                    .feedback(request.getFeedback())
+                    .createdDate(existingRating.getCreatedDate())
                     .build();
+            ratingHistoryRepository.save(newHistory);
+    
+            return mapToResponse(existingRating);
+        } else {
+            Rating newRating = Rating.builder()
+                    .course(course)
+                    .user(user)
+                    .rating(request.getRating())
+                    .feedback(request.getFeedback())
+                    .createdDate(new Date())
+                    .build();
+            ratingRepository.save(newRating);
+    
+            RatingHistory newHistory = RatingHistory.builder()
+                    .course(newRating.getCourse())
+                    .user(newRating.getUser())
+                    .rating(newRating.getRating())
+                    .feedback(newRating.getFeedback())
+                    .createdDate(newRating.getCreatedDate())
+                    .build();
+            ratingHistoryRepository.save(newHistory);
+    
+            return mapToResponse(newRating);
         }
+    }
+            
+    public CourseRatingResponse getRatingsByCourseId(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found!"));
 
-        List<Rating> allRatings = courses.stream()
-                .flatMap(c -> ratingRepository.findByCourse(c).stream())
-                .collect(Collectors.toList());
-        double averageRating = allRatings.stream()
+        List<Rating> ratings = ratingRepository.findByCourse(course);
+        double averageRating = ratings.stream()
                 .mapToDouble(Rating::getRating)
                 .average()
                 .orElse(0.0);
-        List<RatingResponse> ratingResponses = allRatings.stream()
-                .map(this::mapToRatingResponse)
+
+        int totalRatings = ratings.size();
+
+        List<RatingResponse> ratingResponses = ratings.stream()
+                .map(this::mapToResponse)
                 .collect(Collectors.toList());
+
         return CourseRatingResponse.builder()
                 .courseName(course.getName())
                 .averageRating(averageRating)
+                .totalRatings(totalRatings)
                 .ratings(ratingResponses)
                 .build();
-    }
-
-    public RatingResponse updateRating(String id, RatingUpdateRequest request) {
-        Rating existingRating = ratingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rating not found!"));
-        RatingHistory ratingHistory = RatingHistory.builder()
-                .course(existingRating.getCourse())
-                .user(existingRating.getUser())
-                .rating(existingRating.getRating())
-                .feedback(existingRating.getFeedback())
-                .createdDate(existingRating.getCreatedDate())
-                .build();
-        ratingHistoryRepository.save(ratingHistory);
-        existingRating.setRating(request.getRating());
-        existingRating.setFeedback(request.getFeedback());
-        existingRating.setCreatedDate(new Date());
-        ratingRepository.save(existingRating);
-
-        return mapToResponse(existingRating);
     }
 
     public RatingResponse deleteRating(String id) {
@@ -122,19 +127,9 @@ public class RatingService {
                 .rating(rating.getRating())
                 .feedback(rating.getFeedback())
                 .courseName(rating.getCourse().getName())
-                .createdDate(rating.getCreatedDate())
                 .userName(rating.getUser().getName())
-                .build();
-    }
-
-    private RatingResponse mapToRatingResponse(Rating rating) {
-        return RatingResponse.builder()
-                .id(rating.getId())
-                .rating(rating.getRating())
-                .feedback(rating.getFeedback())
-                .courseName(rating.getCourse().getName())
+                .userId(rating.getUser().getId())
                 .createdDate(rating.getCreatedDate())
-                .userName(rating.getUser().getName())
                 .build();
     }
 }

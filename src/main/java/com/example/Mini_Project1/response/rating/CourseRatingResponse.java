@@ -9,5 +9,6 @@ import lombok.Data;
 public class CourseRatingResponse {
     private String courseName;
     private double averageRating;
+    private int totalRatings;
     private List<RatingResponse> ratings;
 }
