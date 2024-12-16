@@ -12,6 +12,7 @@ import com.example.Mini_Project1.repository.PaymentRepository;
 import com.example.Mini_Project1.repository.UserRepository;
 import com.example.Mini_Project1.request.course.CreateCourseRequest;
 import com.example.Mini_Project1.response.course.CourseResponse;
+import com.example.Mini_Project1.response.user.UserResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +23,6 @@ import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 
 import java.util.*;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
@@ -321,5 +321,59 @@ public class CourseServiceTest {
         });
 
         assertEquals("Can't find course with id C01", exception.getMessage());
+    }
+
+    @Test
+    public void testGetStudentsEnroll_whenStatusIsNotNull() {
+        UserResponse mockUserResponse = new UserResponse();
+        mockUserResponse.setName("John");
+        course.setId(UUID.randomUUID().toString());
+
+        List<Payment> mockPayments = Collections.singletonList(payment);
+        List<User> mockUsers = mockPayments.stream().map(Payment::getUser).toList();
+        List<UserResponse> mockResponses = List.of(mockUserResponse);
+
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+        when(paymentRepository.findByCourse(course)).thenReturn(mockPayments);
+        when(modelMapper.map(mockUsers, new TypeToken<List<UserResponse>>() {}.getType())).thenReturn(mockResponses);
+
+        List<UserResponse> result = courseService.getStudentsEnroll(UUID.fromString(course.getId()), null);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("John", result.getFirst().getName());
+    }
+
+    @Test
+    public void testGetStudentsEnroll_whenStatusIsNull() {
+        UserResponse mockUserResponse = new UserResponse();
+        mockUserResponse.setName("John");
+        course.setId(UUID.randomUUID().toString());
+
+        List<Payment> mockPayments = Collections.singletonList(payment);
+        List<User> mockUsers = mockPayments.stream().map(Payment::getUser).toList();
+        List<UserResponse> mockResponses = List.of(mockUserResponse);
+
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+        when(paymentRepository.findByCourseAndStatus(course,3)).thenReturn(mockPayments);
+        when(modelMapper.map(mockUsers, new TypeToken<List<UserResponse>>() {}.getType())).thenReturn(mockResponses);
+
+        List<UserResponse> result = courseService.getStudentsEnroll(UUID.fromString(course.getId()), PaymentStatus.SUCCESS);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("John", result.getFirst().getName());
+    }
+
+    @Test
+    public void testGetStudentsEnroll_notFound() {
+        UUID courseId = UUID.randomUUID();
+        when(courseRepository.findById(courseId.toString())).thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(NotFoundException.class, () -> {
+            courseService.getStudentsEnroll(courseId, null);
+        });
+
+        assertEquals("Can't find course with id " + courseId, exception.getMessage());
     }
 }
