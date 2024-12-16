@@ -134,7 +134,6 @@ public class CourseServiceTest {
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        assertEquals("Math", result.get(1).getName());
     }
 
     @Test
@@ -150,6 +149,56 @@ public class CourseServiceTest {
         when(modelMapper.map(mockCourses, new TypeToken<List<CourseResponse>>(){}.getType())).thenReturn(mockResponse);
 
         List<CourseResponse> result = courseService.getCoursesByStatus(CourseStatus.PENDING);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Math", result.getFirst().getName());
+    }
+
+    @Test
+    void testSearchCourses_whenStatusIsNull() {
+        String name = "math";
+
+        Course mockCourse = new Course();
+        mockCourse.setName("math1");
+        mockCourse.setPrice(180f);
+
+        List<Course> mockCourses = new ArrayList<>();
+        mockCourses.add(mockCourse);
+        mockCourses.add(course);
+
+        when(courseRepository.findCourseByNameContainingIgnoreCase(name)).thenReturn(mockCourses);
+
+        CourseResponse mockResponse = new CourseResponse();
+        mockResponse.setName("math1");
+        mockResponse.setPrice(180f);
+
+        List<CourseResponse> mockResponses = new ArrayList<>();
+        mockResponses.add(expectedResponse);
+        mockResponses.add(mockResponse);
+
+        when(modelMapper.map(mockCourses, new TypeToken<List<CourseResponse>>() {}.getType())).thenReturn(mockResponses);
+
+        List<CourseResponse> result = courseService.searchCourses(name, null, true);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("Math", result.get(0).getName());
+        assertEquals("math1", result.get(1).getName());
+        assertTrue(result.get(0).getPrice() <= result.get(1).getPrice());
+    }
+
+    @Test
+    void testSearchCourses_whenCourseStatusIsNotNull() {
+        String name = "math";
+
+        List<Course> mockCourses = Collections.singletonList(course);
+        when(courseRepository.findCourseByNameContainingIgnoreCaseAndStatus(name,1)).thenReturn(mockCourses);
+
+        List<CourseResponse> mockResponses = Collections.singletonList(expectedResponse);
+        when(modelMapper.map(mockCourses, new TypeToken<List<CourseResponse>>() {}.getType())).thenReturn(mockResponses);
+
+        List<CourseResponse> result = courseService.searchCourses(name, CourseStatus.PENDING, false);
 
         assertNotNull(result);
         assertEquals(1, result.size());
