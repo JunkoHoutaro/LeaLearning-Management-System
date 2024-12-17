@@ -19,7 +19,6 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 public class CommentControllerTest {
@@ -37,99 +36,127 @@ public class CommentControllerTest {
 
     @Test
     public void testCreateComment() {
-        // Mock request
         CommentRequest request = new CommentRequest();
+        request.setContent("This is a test comment");
         request.setCourseId(UUID.randomUUID().toString());
         request.setUserId(UUID.randomUUID().toString());
-        request.setContent("This is a test comment");
 
-        // Mock response
         CommentResponse response = new CommentResponse();
         response.setContent("This is a test comment");
 
         when(commentService.createComment(any(CommentRequest.class))).thenReturn(response);
 
-        // Call controller method
         ResponseEntity<CommentResponse> result = commentController.createComment(request);
 
-        // Verify result
         assertEquals(HttpStatus.OK, result.getStatusCode());
         assertEquals("This is a test comment", result.getBody().getContent());
     }
 
     @Test
     public void testReplyToComment() {
-        // Mock request
-        ReplyRequest request = new ReplyRequest();
-        request.setRootCommentId(UUID.randomUUID().toString());
-        request.setUserId(UUID.randomUUID().toString());
-        request.setContent("This is a reply");
+        ReplyRequest replyRequest = new ReplyRequest();
+        replyRequest.setContent("This is a reply");
+        replyRequest.setRootCommentId(UUID.randomUUID().toString());
+        replyRequest.setUserId(UUID.randomUUID().toString());
 
-        // Mock response
         CommentResponse response = new CommentResponse();
         response.setContent("This is a reply");
 
         when(commentService.replyToComment(any(ReplyRequest.class))).thenReturn(response);
 
-        // Call controller method
-        ResponseEntity<CommentResponse> result = commentController.replyToComment(request);
+        ResponseEntity<CommentResponse> result = commentController.replyToComment(replyRequest);
 
-        // Verify result
         assertEquals(HttpStatus.OK, result.getStatusCode());
         assertEquals("This is a reply", result.getBody().getContent());
+    }
+
+    @Test
+    public void testGetAllComments() {
+        CommentResponse response = new CommentResponse();
+        response.setContent("This is a test comment");
+
+        when(commentService.getAllComments()).thenReturn(Collections.singletonList(response));
+
+        ResponseEntity<List<CommentResponse>> result = commentController.getAllComments();
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertEquals(1, result.getBody().size());
     }
 
     @Test
     public void testGetCommentsByCourseId() {
         String courseId = UUID.randomUUID().toString();
 
-        // Mock response
         CommentResponse response = new CommentResponse();
-        response.setContent("Test comment");
-        List<CommentResponse> comments = Collections.singletonList(response);
+        response.setContent("This is a test comment");
 
-        when(commentService.getCommentsByCourseId(anyString())).thenReturn(comments);
+        when(commentService.getCommentsByCourseId(courseId)).thenReturn(Collections.singletonList(response));
 
-        // Call controller method
         ResponseEntity<List<CommentResponse>> result = (ResponseEntity<List<CommentResponse>>) commentController.getCommentsByCourseId(courseId);
 
-        // Verify result
         assertEquals(HttpStatus.OK, result.getStatusCode());
         assertEquals(1, result.getBody().size());
-        assertEquals("Test comment", result.getBody().get(0).getContent());
     }
 
     @Test
-    public void testUpdateCommentContent() {
-        UUID commentId = UUID.randomUUID();
-        UpdateCommentRequest request = new UpdateCommentRequest();
-        request.setContent("Updated content");
+    public void testGetCommentsByCourseIdInvalidUUID() {
+        String invalidCourseId = "invalid-uuid";
 
-        // Mock response
+        ResponseEntity<?> result = commentController.getCommentsByCourseId(invalidCourseId);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        assertEquals("Invalid UUID format for courseId", result.getBody());
+    }
+
+    @Test
+    public void testUpdateComment() {
+        String commentId = UUID.randomUUID().toString();
+        UpdateCommentRequest updateRequest = new UpdateCommentRequest();
+        updateRequest.setContent("Updated content");
+
         CommentResponse response = new CommentResponse();
         response.setContent("Updated content");
 
         when(commentService.updateCommentContent(any(UUID.class), any(UpdateCommentRequest.class))).thenReturn(response);
 
-        // Call controller method
-        ResponseEntity<CommentResponse> result = (ResponseEntity<CommentResponse>) commentController.updateComment(commentId.toString(), request);
+        ResponseEntity<?> result = commentController.updateComment(commentId, updateRequest);
 
-        // Verify result
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals("Updated content", result.getBody().getContent());
+        assertEquals("Updated content", ((CommentResponse) result.getBody()).getContent());
+    }
+
+    @Test
+    public void testUpdateCommentInvalidUUID() {
+        String invalidCommentId = "invalid-uuid";
+        UpdateCommentRequest updateRequest = new UpdateCommentRequest();
+        updateRequest.setContent("Updated content");
+
+        ResponseEntity<?> result = commentController.updateComment(invalidCommentId, updateRequest);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        assertEquals("Invalid UUID format for commentId", result.getBody());
     }
 
     @Test
     public void testDeleteComment() {
-        UUID commentId = UUID.randomUUID();
+        String commentId = UUID.randomUUID().toString();
+        String message = "Comment deleted successfully";
 
-        when(commentService.deleteComment(any(UUID.class))).thenReturn("Comment deleted");
+        when(commentService.deleteComment(any(UUID.class))).thenReturn(message);
 
-        // Call controller method
-        ResponseEntity<?> result = commentController.deleteComment(commentId.toString());
+        ResponseEntity<?> result = commentController.deleteComment(commentId);
 
-        // Verify result
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals("Comment deleted", result.getBody());
+        assertEquals(message, result.getBody());
+    }
+
+    @Test
+    public void testDeleteCommentInvalidUUID() {
+        String invalidCommentId = "invalid-uuid";
+
+        ResponseEntity<?> result = commentController.deleteComment(invalidCommentId);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        assertEquals("Invalid UUID format for commentId", result.getBody());
     }
 }

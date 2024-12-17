@@ -31,10 +31,8 @@ public class CommentRepositoryTest {
     private Comment comment;
     private Course course;
 
-    // Tạo đối tượng User, Course và Comment cho các bài test
     @BeforeEach
     void setUp() {
-        // Tạo User
         user = User.builder()
                 .name("John Doe")
                 .email("john.doe@example.com")
@@ -59,7 +57,6 @@ public class CommentRepositoryTest {
         comment = commentRepository.save(comment);
     }
 
-    // Xoá tất cả dữ liệu sau mỗi test
     @AfterEach
     void tearDown() {
         commentRepository.deleteAll();
@@ -67,7 +64,6 @@ public class CommentRepositoryTest {
         courseRepository.deleteAll();
     }
 
-    // Test việc lưu comment
     @Test
     void testSaveComment() {
         Comment mockComment = Comment.builder()
@@ -89,7 +85,6 @@ public class CommentRepositoryTest {
         // Truy vấn tìm comment theo courseId
         List<Comment> foundComments = commentRepository.findByCourse_Id(course.getId());
 
-        // Kiểm tra kết quả
         assertThat(foundComments).isNotNull();
         assertThat(foundComments.size()).isGreaterThan(0);
         assertThat(foundComments.get(0).getCourse().getId()).isEqualTo(course.getId());

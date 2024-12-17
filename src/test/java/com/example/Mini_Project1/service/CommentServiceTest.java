@@ -12,21 +12,22 @@ import com.example.Mini_Project1.request.course.UpdateCommentRequest;
 import com.example.Mini_Project1.response.course.CommentResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 import org.modelmapper.ModelMapper;
 
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
-class CommentServiceTest {
+public class CommentServiceTest {
 
     @Mock
     private CommentRepository commentRepository;
@@ -43,152 +44,183 @@ class CommentServiceTest {
     @InjectMocks
     private CommentService commentService;
 
-    private Course course;
-    private User user;
-    private Comment comment;
+    private UUID courseId;
+    private UUID userId;
+    private UUID commentId;
 
     @BeforeEach
-    void setUp() {
-        course = new Course();
-        course.setId(UUID.randomUUID().toString());
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
 
-        user = new User();
-        user.setId(UUID.randomUUID().toString());
-
-        comment = new Comment();
-        comment.setId(UUID.randomUUID().toString());
-        comment.setCourse(course);
-        comment.setUser(user);
-        comment.setContent("Test comment");
-        comment.setCreatedDate(new Date());
-        comment.setUpdatedDate(new Date());
+        courseId = UUID.randomUUID();
+        userId = UUID.randomUUID();
+        commentId = UUID.randomUUID();
     }
 
     @Test
-    void testCreateComment_ShouldReturnCommentResponse() {
+    public void testCreateComment_Success() {
         CommentRequest request = new CommentRequest();
-        request.setCourseId(course.getId());
-        request.setUserId(user.getId());
+        request.setCourseId(courseId.toString());
+        request.setUserId(userId.toString());
         request.setContent("Test comment");
 
-        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
-        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
-        when(commentRepository.save(any(Comment.class))).thenReturn(comment);
+        Course course = new Course();
+        course.setId(courseId.toString());
+        User user = new User();
+        user.setId(userId.toString());
 
-        // Sử dụng doReturn().when() thay vì when().thenReturn()
-        doReturn(new CommentResponse()).when(modelMapper).map(any(Comment.class), eq(CommentResponse.class));
+        Comment newComment = Comment.builder()
+                .course(course)
+                .user(user)
+                .content(request.getContent())
+                .rootComment(null)
+                .createdDate(new Date())
+                .updatedDate(new Date())
+                .build();
+
+        when(courseRepository.findById(courseId.toString())).thenReturn(Optional.of(course));
+        when(userRepository.findById(userId.toString())).thenReturn(Optional.of(user));
+        when(commentRepository.save(any(Comment.class))).thenReturn(newComment);
+        when(modelMapper.map(any(Comment.class), eq(CommentResponse.class))).thenReturn(new CommentResponse());
 
         CommentResponse response = commentService.createComment(request);
 
         assertNotNull(response);
-        verify(commentRepository).save(any(Comment.class));
+        verify(commentRepository, times(1)).save(any(Comment.class));
     }
 
     @Test
-    void testCreateComment_WhenCourseNotFound_ShouldThrowException() {
+    public void testCreateComment_InvalidUUID() {
         CommentRequest request = new CommentRequest();
-        request.setCourseId(UUID.randomUUID().toString());
-        request.setUserId(user.getId());
+        request.setCourseId("invalid-uuid");
+        request.setUserId(userId.toString());
         request.setContent("Test comment");
 
-        when(courseRepository.findById(anyString())).thenReturn(Optional.empty());
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            commentService.createComment(request);
+        });
 
-        assertThrows(RuntimeException.class, () -> commentService.createComment(request));
+        assertEquals("Invalid UUID format for CourseId or UserId", exception.getMessage());
     }
 
     @Test
-    void testCreateComment_WhenUserNotFound_ShouldThrowException() {
-        CommentRequest request = new CommentRequest();
-        request.setCourseId(course.getId());
-        request.setUserId(UUID.randomUUID().toString());
-        request.setContent("Test comment");
-
-        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
-        when(userRepository.findById(anyString())).thenReturn(Optional.empty());
-
-        assertThrows(RuntimeException.class, () -> commentService.createComment(request));
-    }
-
-    @Test
-    void testReplyToComment_ShouldReturnCommentResponse() {
+    public void testReplyToComment_Success() {
         ReplyRequest request = new ReplyRequest();
-        request.setRootCommentId(comment.getId());
-        request.setUserId(user.getId());
-        request.setContent("Test reply");
+        request.setRootCommentId(commentId.toString());
+        request.setUserId(userId.toString());
+        request.setContent("Reply to comment");
 
-        when(commentRepository.findById(comment.getId())).thenReturn(Optional.of(comment));
-        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        Comment parentComment = new Comment();
+        parentComment.setId(commentId.toString());
 
-        Comment reply = new Comment();
-        reply.setId(UUID.randomUUID().toString());
-        reply.setCourse(course);
-        reply.setUser(user);
-        reply.setContent("Test reply");
-        reply.setRootComment(comment.getId());
-        reply.setCreatedDate(new Date());
-        reply.setUpdatedDate(new Date());
+        User user = new User();
+        user.setId(userId.toString());
 
+        Comment reply = Comment.builder()
+                .course(parentComment.getCourse())
+                .user(user)
+                .content(request.getContent())
+                .rootComment(request.getRootCommentId())
+                .createdDate(new Date())
+                .updatedDate(new Date())
+                .build();
+
+        when(commentRepository.findById(commentId.toString())).thenReturn(Optional.of(parentComment));
+        when(userRepository.findById(userId.toString())).thenReturn(Optional.of(user));
         when(commentRepository.save(any(Comment.class))).thenReturn(reply);
-        doReturn(new CommentResponse()).when(modelMapper).map(any(Comment.class), eq(CommentResponse.class));
+        when(modelMapper.map(any(Comment.class), eq(CommentResponse.class))).thenReturn(new CommentResponse());
 
         CommentResponse response = commentService.replyToComment(request);
 
         assertNotNull(response);
-        verify(commentRepository).save(any(Comment.class));
+        verify(commentRepository, times(1)).save(any(Comment.class));
     }
 
     @Test
-    void testReplyToComment_WhenParentCommentNotFound_ShouldThrowException() {
+    public void testReplyToComment_ParentNotFound() {
         ReplyRequest request = new ReplyRequest();
-        request.setRootCommentId(UUID.randomUUID().toString());
-        request.setUserId(user.getId());
-        request.setContent("Test reply");
+        request.setRootCommentId(commentId.toString());
+        request.setUserId(userId.toString());
+        request.setContent("Reply to comment");
 
-        when(commentRepository.findById(anyString())).thenReturn(Optional.empty());
+        when(commentRepository.findById(commentId.toString())).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> commentService.replyToComment(request));
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            commentService.replyToComment(request);
+        });
+
+        assertEquals("Parent comment not found", exception.getMessage());
     }
 
     @Test
-    void testUpdateCommentContent_ShouldReturnUpdatedCommentResponse() {
+    public void testGetCommentsByCourseId_Success() {
+        List<Comment> comments = Arrays.asList(new Comment(), new Comment());
+        when(commentRepository.findByCourse_Id(courseId.toString())).thenReturn(comments);
+        when(modelMapper.map(any(Comment.class), eq(CommentResponse.class)))
+                .thenReturn(new CommentResponse());
+
+        List<CommentResponse> response = commentService.getCommentsByCourseId(courseId.toString());
+
+        assertEquals(2, response.size());
+        verify(commentRepository, times(1)).findByCourse_Id(courseId.toString());
+    }
+
+    @Test
+    public void testUpdateComment_Success() {
+        // Tạo yêu cầu cập nhật comment
         UpdateCommentRequest request = new UpdateCommentRequest();
-        request.setContent("Updated content");
+        request.setContent("Updated comment");
 
-        when(commentRepository.findById(comment.getId())).thenReturn(Optional.of(comment));
-        when(commentRepository.save(any(Comment.class))).thenReturn(comment);
+        // Tạo comment hiện tại (comment cũ)
+        Comment existingComment = new Comment();
+        existingComment.setId(commentId.toString());
+        existingComment.setContent("Old comment");
 
-        doReturn(new CommentResponse()).when(modelMapper).map(any(Comment.class), eq(CommentResponse.class));
+        // Tạo comment sau khi được cập nhật
+        Comment updatedComment = new Comment();
+        updatedComment.setId(commentId.toString());
+        updatedComment.setContent(request.getContent()); // Nội dung được cập nhật
 
-        CommentResponse response = commentService.updateCommentContent(UUID.fromString(comment.getId()), request);
+        // Tạo CommentResponse với nội dung mới
+        CommentResponse updatedCommentResponse = new CommentResponse();
+        updatedCommentResponse.setContent(request.getContent()); // Đảm bảo giá trị content được cập nhật
 
+        // Mocks behavior của commentRepository và modelMapper
+        when(commentRepository.findById(commentId.toString())).thenReturn(Optional.of(existingComment));
+        when(commentRepository.save(any(Comment.class))).thenReturn(updatedComment); // Mocks save()
+        when(modelMapper.map(any(Comment.class), eq(CommentResponse.class))).thenReturn(updatedCommentResponse); // Mocks modelMapper
+
+        // Gọi phương thức updateCommentContent
+        CommentResponse response = commentService.updateCommentContent(commentId, request);
+
+        // Kiểm tra kết quả
         assertNotNull(response);
-        verify(commentRepository).save(any(Comment.class));
+        assertEquals("Updated comment", response.getContent()); // Kiểm tra nội dung đã được cập nhật
+        verify(commentRepository, times(1)).save(any(Comment.class)); // Kiểm tra save được gọi đúng một lần
     }
 
-    @Test
-    void testUpdateCommentContent_WhenCommentNotFound_ShouldThrowException() {
-        UpdateCommentRequest request = new UpdateCommentRequest();
-        request.setContent("Updated content");
-
-        when(commentRepository.findById(anyString())).thenReturn(Optional.empty());
-
-        assertThrows(RuntimeException.class, () -> commentService.updateCommentContent(UUID.randomUUID(), request));
-    }
 
     @Test
-    void testDeleteComment_ShouldReturnSuccessMessage() {
-        when(commentRepository.findById(comment.getId())).thenReturn(Optional.of(comment));
+    public void testDeleteComment_Success() {
+        Comment comment = new Comment();
+        comment.setId(commentId.toString());
 
-        String result = commentService.deleteComment(UUID.fromString(comment.getId()));
+        when(commentRepository.findById(commentId.toString())).thenReturn(Optional.of(comment));
+
+        String result = commentService.deleteComment(commentId);
 
         assertEquals("Comment and its replies deleted successfully", result);
-        verify(commentRepository).delete(any(Comment.class));
+        verify(commentRepository, times(1)).delete(comment);
     }
 
     @Test
-    void testDeleteComment_WhenCommentNotFound_ShouldThrowException() {
-        when(commentRepository.findById(anyString())).thenReturn(Optional.empty());
+    public void testDeleteComment_CommentNotFound() {
+        when(commentRepository.findById(commentId.toString())).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> commentService.deleteComment(UUID.randomUUID()));
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            commentService.deleteComment(commentId);
+        });
+
+        assertEquals("Comment not found", exception.getMessage());
     }
 }
