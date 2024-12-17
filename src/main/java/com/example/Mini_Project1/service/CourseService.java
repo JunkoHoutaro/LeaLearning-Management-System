@@ -91,7 +91,7 @@ public class CourseService {
     @Transactional
     public CourseResponse updateCourse(UpdateCourseRequest request) {
         Course course = courseRepository.findById(request.getCourseId().toString()).orElseThrow(
-                ()-> new NotFoundException("Can't find user with id " + request.getCourseId().toString()));
+                ()-> new NotFoundException("Can't find course with id " + request.getCourseId().toString()));
 
         // Load instructor
         Hibernate.initialize(course.getUser());
@@ -106,7 +106,7 @@ public class CourseService {
 
     public CourseResponse deleteCourse(UUID courseId) {
         Course course = courseRepository.findById(courseId.toString()).orElseThrow(
-                ()-> new NotFoundException("Can't find user with id " + courseId));
+                ()-> new NotFoundException("Can't find course with id " + courseId));
 
         // Delete course -> change status to delete(3)
         course.setStatus(3);
@@ -139,8 +139,9 @@ public class CourseService {
         List<User> users = payments.stream().map(Payment::getUser).toList();
         return modelMapper.map(users, new TypeToken<List<UserResponse>>() {}.getType());
     }
+
     public Course getCourseById(String courseId) {
-        return courseRepository.findById(courseId.toString()).orElseThrow(
-                () -> new NotFoundException("Can't find course with id " + toString()));
+        return courseRepository.findById(courseId).orElseThrow(
+                () -> new NotFoundException("Can't find course with id " + courseId));
     }
 }
