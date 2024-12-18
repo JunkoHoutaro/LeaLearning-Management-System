@@ -1,16 +1,21 @@
 package com.example.Mini_Project1.controller;
 
+import com.example.Mini_Project1.exception.ErrorResponse;
 import com.example.Mini_Project1.request.lesson.CreateLessonRequest;
 import com.example.Mini_Project1.request.lesson.UpdateLessonRequest;
+import com.example.Mini_Project1.response.file.FileResponse;
 import com.example.Mini_Project1.response.lesson.LessonResponse;
 import com.example.Mini_Project1.service.LessonService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -50,5 +55,22 @@ public class LessonController {
     @ApiResponse(responseCode = "200", description = "Delete successfully")
     public ResponseEntity<LessonResponse> deleteLesson(@RequestParam UUID lessonId) {
         return ResponseEntity.ok(lessonService.deleteLesson(lessonId));
+    }
+
+    @PostMapping(value = "video", consumes = "multipart/form-data")
+    @Operation(summary = "Upload a video for the lesson")
+    @ApiResponse(responseCode = "200", description = "Upload successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<FileResponse> uploadVideo(@RequestParam("file") MultipartFile file, @RequestParam UUID lessonId) throws Exception {
+        return ResponseEntity.ok(lessonService.uploadLessonVideo(lessonId, file));
+    }
+
+    @PostMapping(value = "resource", consumes = "multipart/form-data")
+    @Operation(summary = "Upload a resource for the lesson")
+    @ApiResponse(responseCode = "200", description = "Upload successfully")
+    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<FileResponse> uploadResource(@RequestParam("file") MultipartFile file, @RequestParam UUID lessonId) throws Exception {
+        return ResponseEntity.ok(lessonService.uploadLessonResource(lessonId, file));
     }
 }
