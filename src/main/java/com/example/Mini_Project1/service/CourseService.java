@@ -13,6 +13,8 @@ import com.example.Mini_Project1.repository.PaymentRepository;
 import com.example.Mini_Project1.repository.UserRepository;
 import com.example.Mini_Project1.request.course.CreateCourseRequest;
 import com.example.Mini_Project1.request.course.UpdateCourseRequest;
+import com.example.Mini_Project1.response.chapter.ChapterDetailsResponse;
+import com.example.Mini_Project1.response.course.CourseDetailsResponse;
 import com.example.Mini_Project1.response.course.CourseResponse;
 import com.example.Mini_Project1.response.user.UserResponse;
 import jakarta.transaction.Transactional;
@@ -33,6 +35,7 @@ public class CourseService {
     private final UserRepository userRepository;
     private final PaymentRepository paymentRepository;
     private final ModelMapper modelMapper;
+    private final ChapterService chapterService;
 
     @Transactional
     public CourseResponse createCourse(CreateCourseRequest request) {
@@ -144,4 +147,27 @@ public class CourseService {
         return courseRepository.findById(courseId).orElseThrow(
                 () -> new NotFoundException("Can't find course with id " + courseId));
     }
+
+    public CourseDetailsResponse getCourseDetails(UUID userId, UUID courseId) {
+        Course course = courseRepository.findById(courseId.toString()).orElseThrow(
+                () -> new NotFoundException("Can't find course with id " + courseId)
+        );
+
+        if(!userRepository.existsById(userId.toString())){
+            throw new BadRequestException("Can't find user with id " + userId);
+        }
+
+        CourseResponse courseResponse = modelMapper.map(course, CourseResponse.class);
+        boolean isPaid = paymentRepository.existsByUserIdAndCourseId(userId.toString(), courseId.toString());
+        List<ChapterDetailsResponse> chapterDetails = chapterService.getChapterDetails(courseId.toString(),isPaid);
+
+        CourseDetailsResponse courseDetailsResponse = new CourseDetailsResponse();
+        courseDetailsResponse.setUserId(userId.toString());
+        courseDetailsResponse.setCourse(courseResponse);
+        courseDetailsResponse.setChapters(chapterDetails);
+
+        return courseDetailsResponse;
+    }
+
+
 }

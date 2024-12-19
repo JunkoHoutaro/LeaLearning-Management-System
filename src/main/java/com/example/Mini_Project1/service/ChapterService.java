@@ -2,34 +2,35 @@ package com.example.Mini_Project1.service;
 
 import com.example.Mini_Project1.entity.Chapter;
 import com.example.Mini_Project1.entity.Course;
+import com.example.Mini_Project1.entity.Lesson;
 import com.example.Mini_Project1.repository.ChapterRepository;
 import com.example.Mini_Project1.repository.CourseRepository;
+import com.example.Mini_Project1.repository.LessonRepository;
 import com.example.Mini_Project1.request.chapter.CreateChapterRequest;
 import com.example.Mini_Project1.request.chapter.UpdateChapterRequest;
+import com.example.Mini_Project1.response.chapter.ChapterDetailsResponse;
 import com.example.Mini_Project1.response.chapter.ChapterResponse;
+import com.example.Mini_Project1.response.lesson.LessonResponse;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@AllArgsConstructor
 public class ChapterService {
 
     private final ChapterRepository chapterRepository;
     private final CourseRepository courseRepository;
     private final ModelMapper modelMapper;
-
-    public ChapterService(ChapterRepository chapterRepository, CourseRepository courseRepository,
-            ModelMapper modelMapper) {
-        this.chapterRepository = chapterRepository;
-        this.courseRepository = courseRepository;
-        this.modelMapper = modelMapper;
-    }
+    private final LessonRepository lessonRepository;
 
     @Transactional
     public ChapterResponse createChapter(CreateChapterRequest request) {
@@ -86,6 +87,18 @@ public class ChapterService {
 
         // Trả về ChapterResponse sau khi xóa
         return chapterResponse;
+    }
+
+    public List<ChapterDetailsResponse> getChapterDetails(String courseId, Boolean isPaid) {
+        List<Chapter> chapters = chapterRepository.getChapterByCourseId(courseId);
+        List<ChapterDetailsResponse> chapterResponses = modelMapper.map(chapters, new TypeToken<List<ChapterDetailsResponse>>() {}.getType());
+        for (ChapterDetailsResponse chapterResponse : chapterResponses) {
+            List<Lesson> lessons = isPaid? lessonRepository.findByChapterId(chapterResponse.getChapter().getId()) : lessonRepository.findByChapterIdAndIsDemo(chapterResponse.getChapter().getId(), 1);
+            List<LessonResponse> lessonResponses = modelMapper.map(lessons, new TypeToken<List<LessonResponse>>(){}.getType());
+            chapterResponse.setLessons(lessonResponses);
+        }
+
+        return chapterResponses;
     }
 
 }
