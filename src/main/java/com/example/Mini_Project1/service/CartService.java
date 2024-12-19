@@ -5,6 +5,7 @@ import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.User;
 import com.example.Mini_Project1.repository.CartRepository;
 import com.example.Mini_Project1.repository.CourseRepository;
+import com.example.Mini_Project1.repository.PaymentRepository;
 import com.example.Mini_Project1.repository.UserRepository;
 import com.example.Mini_Project1.response.cart.CartResponse;
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ public class CartService {
   private final CartRepository cartRepository;
   private final UserRepository userRepository;
   private final CourseRepository courseRepository;
+  private final PaymentRepository paymentRepository;
   private final ModelMapper modelMapper;
 
   @Transactional
@@ -29,6 +31,11 @@ public class CartService {
         courseRepository
             .findById(courseId)
             .orElseThrow(() -> new RuntimeException("Course not found"));
+
+    // Check if the user has already purchased the course
+    if (paymentRepository.existsByUserAndCourse(user, course)) {
+      throw new RuntimeException("User has already purchased this course");
+    }
 
     Cart cart = cartRepository.findByUserId(userId);
     if (cart == null) {

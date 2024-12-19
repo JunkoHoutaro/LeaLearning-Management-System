@@ -4,6 +4,7 @@ import com.example.Mini_Project1.request.payment.CreatePaymentRequest;
 import com.example.Mini_Project1.response.payment.PaymentResponse;
 import com.example.Mini_Project1.service.PaymentService;
 import lombok.AllArgsConstructor;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,10 +20,9 @@ public class PaymentController {
     return ResponseEntity.ok(paymentResponse);
   }
 
-  @PostMapping("/checkout")
-  public ResponseEntity<PaymentResponse> checkoutCart(
-      @RequestParam String userId, @RequestParam(required = false) String voucherCode) {
-    PaymentResponse paymentResponse = paymentService.checkoutCart(userId, voucherCode);
+  @PostMapping("/checkout")  
+  public ResponseEntity<List<PaymentResponse>> checkout(@RequestParam String userId, @RequestParam(required = false) String voucherCode) {
+    List<PaymentResponse> paymentResponse = paymentService.checkoutCart(userId, voucherCode);
     return ResponseEntity.ok(paymentResponse);
   }
 }
