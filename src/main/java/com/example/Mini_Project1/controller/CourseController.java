@@ -4,14 +4,13 @@ import com.example.Mini_Project1.enums.Action;
 import com.example.Mini_Project1.enums.CourseStatus;
 import com.example.Mini_Project1.enums.PaymentStatus;
 import com.example.Mini_Project1.exception.ErrorResponse;
-import com.example.Mini_Project1.exception.NotFoundException;
 import com.example.Mini_Project1.request.course.CreateCourseRequest;
 import com.example.Mini_Project1.request.course.UpdateCourseRequest;
+import com.example.Mini_Project1.response.course.CourseDetailsResponse;
 import com.example.Mini_Project1.response.course.CourseResponse;
 import com.example.Mini_Project1.response.user.UserResponse;
 import com.example.Mini_Project1.service.CourseService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -109,5 +108,14 @@ public class CourseController {
 //    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'INSTRUCTOR', 'ADMIN')")
     public ResponseEntity<List<UserResponse>> getStudentsEnroll(@RequestParam UUID courseId, @RequestParam(required = false)PaymentStatus paymentStatus) {
         return ResponseEntity.ok(courseService.getStudentsEnroll(courseId, paymentStatus));
+    }
+
+    @GetMapping(value = "details", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get course details(chapter & lessons)")
+    @ApiResponse(responseCode = "200", description = "Get successfully")
+    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+//    @PreAuthorize("hasAnyRole('STUDENT')")
+    public ResponseEntity<CourseDetailsResponse> getCourseDetails(@RequestParam UUID userId, @RequestParam UUID courseId) {
+        return ResponseEntity.ok(courseService.getCourseDetails(userId, courseId));
     }
 }
