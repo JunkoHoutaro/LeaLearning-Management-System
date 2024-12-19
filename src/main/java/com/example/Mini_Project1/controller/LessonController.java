@@ -22,7 +22,7 @@ import java.util.UUID;
 
 @RestController
 @AllArgsConstructor
-@RequestMapping("v1/lesson")
+@RequestMapping("/lesson")
 public class LessonController {
     private final LessonService lessonService;
 
