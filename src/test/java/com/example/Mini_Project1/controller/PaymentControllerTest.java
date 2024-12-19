@@ -17,6 +17,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -89,7 +91,7 @@ public class PaymentControllerTest {
         paymentResponse.setDiscount(10.0f);
         paymentResponse.setStatus(1);
 
-        Mockito.when(paymentService.checkoutCart(eq(userId), eq(voucherCode))).thenReturn(paymentResponse);
+        Mockito.when(paymentService.checkoutCart(eq(userId), eq(voucherCode))).thenReturn(List.of(paymentResponse));
 
         // Act & Assert
         mockMvc.perform(MockMvcRequestBuilders.post("/payments/checkout")
@@ -98,10 +100,65 @@ public class PaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("payment789"))
-                .andExpect(jsonPath("$.userId").value(userId))
-                .andExpect(jsonPath("$.price").value(90.0f))
-                .andExpect(jsonPath("$.discount").value(10.0f))
-                .andExpect(jsonPath("$.status").value(1));
+                .andExpect(jsonPath("$[0].id").value("payment789"))
+                .andExpect(jsonPath("$[0].userId").value(userId))
+                .andExpect(jsonPath("$[0].price").value(90.0f))
+                .andExpect(jsonPath("$[0].discount").value(10.0f))
+                .andExpect(jsonPath("$[0].status").value(1));
+    }
+
+    @Test
+    @WithMockUser // Mock authentication
+    public void testCreatePayment_shouldReturnBadRequest_whenRequestIsInvalid() throws Exception {
+        // Arrange
+        CreatePaymentRequest createPaymentRequest = new CreatePaymentRequest();
+        // Missing userId and courseId
+
+        // Act & Assert
+        mockMvc.perform(MockMvcRequestBuilders.post("/payments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createPaymentRequest)))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser // Mock authentication
+    public void testCheckoutCart_shouldReturnBadRequest_whenUserIdIsMissing() throws Exception {
+        // Act & Assert
+        mockMvc.perform(MockMvcRequestBuilders.post("/payments/checkout")
+                        .param("voucherCode", "voucher789")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser // Mock authentication
+    public void testCheckoutCart_shouldReturnPaymentResponse_whenNoVoucherProvided() throws Exception {
+        // Arrange
+        String userId = "user123";
+
+        PaymentResponse paymentResponse = new PaymentResponse();
+        paymentResponse.setId("payment789");
+        paymentResponse.setUserId(userId);
+        paymentResponse.setCourseId("course456");
+        paymentResponse.setPrice(100.0f);
+        paymentResponse.setDiscount(0.0f);
+        paymentResponse.setStatus(1);
+
+        Mockito.when(paymentService.checkoutCart(eq(userId), eq(null))).thenReturn(List.of(paymentResponse));
+
+        // Act & Assert
+        mockMvc.perform(MockMvcRequestBuilders.post("/payments/checkout")
+                        .param("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("payment789"))
+                .andExpect(jsonPath("$[0].userId").value(userId))
+                .andExpect(jsonPath("$[0].price").value(100.0f))
+                .andExpect(jsonPath("$[0].discount").value(0.0f))
+                .andExpect(jsonPath("$[0].status").value(1));
     }
 }

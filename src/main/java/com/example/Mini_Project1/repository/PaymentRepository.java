@@ -4,6 +4,7 @@ import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.Payment;
 import com.example.Mini_Project1.entity.User;
 import com.example.Mini_Project1.entity.Voucher;
+import com.example.Mini_Project1.response.AdminDashboard.TopCourseResponseRating;
 import com.example.Mini_Project1.response.AdminDashboard.TopCourseResponseRegistration;
 import com.example.Mini_Project1.response.AdminDashboard.TopCourseResponseRevenue;
 import com.example.Mini_Project1.response.AdminDashboard.TopInstructorResponse;
@@ -48,6 +49,5 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
   List<Payment> findByCourse(Course course);
 
   boolean existsByVoucher(Voucher voucher);
-
-  boolean existsByUserIdAndCourseId(String userId, String courseId);
+  boolean existsByUserAndCourse(User user, Course course);
 }
