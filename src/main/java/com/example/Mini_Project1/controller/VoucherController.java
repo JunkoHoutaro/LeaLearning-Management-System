@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/v1/vouchers")
+@RequestMapping("/vouchers")
 @AllArgsConstructor
 public class VoucherController {
 
