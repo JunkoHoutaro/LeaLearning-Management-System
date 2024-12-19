@@ -12,4 +12,5 @@ public class CommentResponse {
     private String rootComment;
     private Date createdDate;
     private Date updatedDate;
+
 }
