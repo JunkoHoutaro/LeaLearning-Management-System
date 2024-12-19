@@ -6,6 +6,7 @@ import com.example.Mini_Project1.exception.NotFoundException;
 import com.example.Mini_Project1.response.file.FileResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,19 +17,13 @@ import java.util.Map;
 @AllArgsConstructor
 public class FileService {
     private final Cloudinary cloudinary;
-    private final List<String> IMAGE_EXTENSIONS = List.of("jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp", "pdf");
-    private final List<String> VIDEO_EXTENSIONS = List.of("mp4", "avi", "mov", "mkv", "flv", "wmv", "webm", "wav");
     private final List<String> VALID_TYPES = List.of("image", "video", "raw");
 
-    public FileResponse uploadResource(String cloudFolderPath, String filePath) throws IOException {
-        File file = new File(filePath);
-        if(!file.exists()) throw new NotFoundException("Invalid file path");
-
-        String fileName = file.getName();
+    public FileResponse uploadResource(String cloudFolderPath, MultipartFile file) throws IOException {
+        String fileName = file.getOriginalFilename();
         String fileNameWithoutExtension = fileName.substring(0, fileName.lastIndexOf("."));
-        String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
 
-        String public_id = isSupportedFileType(extension) ? fileNameWithoutExtension : fileName;
+        String public_id = isSupportedFileType(file) ? fileNameWithoutExtension : fileName;
 
         Map params = ObjectUtils.asMap(
           "resource_type", "auto",
@@ -37,7 +32,7 @@ public class FileService {
           "overwrite", "true"
         );
 
-        Map response = cloudinary.uploader().upload(file, params);
+        Map response = cloudinary.uploader().upload(file.getBytes(), params);
 
         String url = response.get("secure_url").toString();
         Integer size = (Integer) response.get("bytes");
@@ -58,8 +53,9 @@ public class FileService {
         return new FileResponse(result, size, url);
     }
 
-    private boolean isSupportedFileType(String extension) {
-        return IMAGE_EXTENSIONS.contains(extension) || VIDEO_EXTENSIONS.contains(extension);
+    private boolean isSupportedFileType(MultipartFile file) {
+        String contentType = file.getContentType();
+        return contentType != null && (contentType.startsWith("image/") || contentType.startsWith("video/"));
     }
 
     private String extractResourceType(String url) {
