@@ -13,6 +13,7 @@ import com.example.Mini_Project1.repository.PaymentRepository;
 import com.example.Mini_Project1.repository.UserRepository;
 import com.example.Mini_Project1.request.course.CreateCourseRequest;
 import com.example.Mini_Project1.request.course.UpdateCourseRequest;
+import com.example.Mini_Project1.response.course.CourseDetailsResponse;
 import com.example.Mini_Project1.response.course.CourseResponse;
 import com.example.Mini_Project1.response.user.UserResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +40,9 @@ public class CourseServiceTest {
 
     @Mock
     private PaymentRepository paymentRepository;
+
+    @Mock
+    private ChapterService chapterService;
 
     @Mock
     private ModelMapper modelMapper;
@@ -501,5 +505,44 @@ public class CourseServiceTest {
         });
 
         assertEquals("Can't find course with id " + course.getId(), exception.getMessage());
+    }
+
+    @Test
+    void testGetCourseDetails_Success() {
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+        when(userRepository.existsById(user.getId())).thenReturn(true);
+        when(modelMapper.map(course, CourseResponse.class)).thenReturn(expectedResponse);
+        when(paymentRepository.existsByUserIdAndCourseId(user.getId(), course.getId())).thenReturn(true);
+        when(chapterService.getChapterDetails(course.getId(), true)).thenReturn(List.of());
+
+        CourseDetailsResponse response = courseService.getCourseDetails(UUID.fromString(user.getId()), UUID.fromString(course.getId()));
+
+        assertNotNull(response);
+        assertEquals(user.getId(), response.getUserId());
+        assertEquals(expectedResponse, response.getCourse());
+        assertTrue(response.getChapters().isEmpty());
+    }
+
+    @Test
+    void testGetCourseDetails_CourseNotFound() {
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.empty());
+
+        NotFoundException exception = assertThrows(NotFoundException.class, () ->
+                courseService.getCourseDetails(UUID.fromString(user.getId()), UUID.fromString(course.getId()))
+        );
+
+        assertEquals("Can't find course with id " + course.getId(), exception.getMessage());
+    }
+
+    @Test
+    void testGetCourseDetails_UserNotFound() {
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+        when(userRepository.existsById(user.getId())).thenReturn(false);
+
+        BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                courseService.getCourseDetails(UUID.fromString(user.getId()), UUID.fromString(course.getId()))
+        );
+
+        assertEquals("Can't find user with id " + user.getId(), exception.getMessage());
     }
 }
