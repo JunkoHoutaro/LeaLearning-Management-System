@@ -16,7 +16,9 @@ import com.example.Mini_Project1.request.payment.CreatePaymentRequest;
 import com.example.Mini_Project1.response.payment.PaymentResponse;
 import com.example.Mini_Project1.response.voucher.VoucherResponse;
 import jakarta.transaction.Transactional;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -55,13 +57,21 @@ public class PaymentService {
             .findById(request.getUserId())
             .orElseThrow(() -> new NotFoundException("User not found"));
 
-    VoucherResponse voucherResponse =
-        voucherService.getVoucherByCodeService(request.getVoucherCode());
-    Voucher voucher = modelMapper.map(voucherResponse, Voucher.class);
+    // Check if the user has already purchased the course
+    if (paymentRepository.existsByUserAndCourse(user, course)) {
+      throw new RuntimeException("User has already purchased this course");
+    }
 
-    // Check if the user has already used the voucher
-    if (voucher != null && userUsedVoucherRepository.existsByUserAndVoucher(user, voucher)) {
-      throw new RuntimeException("User has already used this voucher");
+    Voucher voucher = null;
+    if (request.getVoucherCode() != null) {
+      VoucherResponse voucherResponse =
+          voucherService.getVoucherByCodeService(request.getVoucherCode());
+      voucher = modelMapper.map(voucherResponse, Voucher.class);
+
+      // Check if the user has already used the voucher
+      if (userUsedVoucherRepository.existsByUserAndVoucher(user, voucher)) {
+        throw new RuntimeException("User has already used this voucher");
+      }
     }
 
     // Calculate the price after applying discounts
@@ -130,7 +140,7 @@ public class PaymentService {
   }
 
   @Transactional
-  public PaymentResponse checkoutCart(String userId, String voucherCode) {
+  public List<PaymentResponse> checkoutCart(String userId, String voucherCode) {
     User user =
         userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
     Cart cart = cartRepository.findByUserId(userId);
@@ -138,75 +148,81 @@ public class PaymentService {
       throw new RuntimeException("Cart is empty");
     }
 
-    float totalPrice = 0;
+    List<PaymentResponse> paymentResponses = new ArrayList<>();
+    Voucher voucher = null;
+
+    if (voucherCode != null) {
+      VoucherResponse voucherResponse = voucherService.getVoucherByCodeService(voucherCode);
+      voucher = modelMapper.map(voucherResponse, Voucher.class);
+      if (voucher != null && userUsedVoucherRepository.existsByUserAndVoucher(user, voucher)) {
+        throw new RuntimeException("User has already used this voucher");
+      }
+    }
+
     for (String courseId : cart.getCourseIds()) {
       Course course =
           courseRepository
               .findById(courseId)
               .orElseThrow(() -> new RuntimeException("Course not found"));
-      float coursePrice = course.getPrice() - course.getDiscount();
-      totalPrice += coursePrice;
-    }
+      float coursePrice = course.getPrice() - course.getDiscount() * course.getPrice();
 
-    Voucher voucher = null;
-    if (voucherCode != null) {
-      VoucherResponse voucherResponse = voucherService.getVoucherByCodeService(voucherCode);
-      voucher = modelMapper.map(voucherResponse, Voucher.class);
       if (voucher != null) {
-        if (userUsedVoucherRepository.existsByUserAndVoucher(user, voucher)) {
-          throw new RuntimeException("User has already used this voucher");
-        }
+        float discount = coursePrice * voucher.getDiscountPercent() / 100;
+        coursePrice -= discount;
       }
-    }
 
-    if (voucher != null) {
-      float discount = totalPrice * voucher.getDiscountPercent() / 100;
-      totalPrice -= discount;
-    }
+      if (coursePrice < 0) {
+        throw new RuntimeException("Final price cannot be negative");
+      }
 
-    Long orderCode;
-    String paymentUrl;
+      Long orderCode;
+      String paymentUrl;
 
-    try {
-      String productName = "Courses";
-      String description = "Payment for courses";
-      String returnUrl = "http://your-return-url.com";
-      String cancelUrl = "http://your-cancel-url.com";
-      String currentTimeString = String.valueOf(new Date().getTime());
-      orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
-      ItemData item =
-          ItemData.builder().name(productName).quantity(1).price((int) totalPrice).build();
-      PaymentData paymentData =
-          PaymentData.builder()
-              .orderCode(orderCode)
-              .amount((int) totalPrice)
-              .description(description)
-              .returnUrl(returnUrl)
-              .cancelUrl(cancelUrl)
-              .item(item)
+      try {
+        String productName = course.getName();
+        String description = course.getName();
+        String returnUrl = "http://your-return-url.com";
+        String cancelUrl = "http://your-cancel-url.com";
+        String currentTimeString = String.valueOf(new Date().getTime());
+        orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
+        ItemData item =
+            ItemData.builder().name(productName).quantity(1).price((int) coursePrice).build();
+        PaymentData paymentData =
+            PaymentData.builder()
+                .orderCode(orderCode)
+                .amount((int) coursePrice)
+                .description(description)
+                .returnUrl(returnUrl)
+                .cancelUrl(cancelUrl)
+                .item(item)
+                .build();
+        CheckoutResponseData data = payOS.createPaymentLink(paymentData);
+        paymentUrl = data.getCheckoutUrl();
+        orderCode = data.getOrderCode();
+      } catch (Exception e) {
+        logger.error("Failed to create payment link", e);
+        throw new RuntimeException("Failed to create payment link", e);
+      }
+
+      Payment payment =
+          Payment.builder()
+              .user(user)
+              .course(course)
+              .price(coursePrice)
+              .status(1)
+              .paymentUrl(paymentUrl)
+              .voucher(voucher)
+              .discount(voucher != null ? voucher.getDiscountPercent() : 0)
+              .content(orderCode.toString())
+              .createdDate(new Date())
+              .updatedDate(new Date())
               .build();
-      CheckoutResponseData data = payOS.createPaymentLink(paymentData);
-      paymentUrl = data.getCheckoutUrl();
-      orderCode = data.getOrderCode();
-    } catch (Exception e) {
-      logger.error("Failed to create payment link", e);
-      throw new RuntimeException("Failed to create payment link", e);
+
+      paymentRepository.save(payment);
+
+      PaymentResponse paymentResponse = modelMapper.map(payment, PaymentResponse.class);
+      paymentResponses.add(paymentResponse);
     }
-
-    Payment payment =
-        Payment.builder()
-            .user(user)
-            .price(totalPrice)
-            .status(1)
-            .paymentUrl(paymentUrl)
-            .voucher(voucher)
-            .discount(voucher != null ? voucher.getDiscountPercent() : 0)
-            .content(orderCode.toString())
-            .createdDate(new Date())
-            .updatedDate(new Date())
-            .build();
-
-    paymentRepository.save(payment);
 
     // save voucher used
     if (voucher != null) {
@@ -218,6 +234,6 @@ public class PaymentService {
     cart.getCourseIds().clear();
     cartRepository.save(cart);
 
-    return modelMapper.map(payment, PaymentResponse.class);
+    return paymentResponses;
   }
 }

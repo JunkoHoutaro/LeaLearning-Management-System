@@ -87,17 +87,16 @@ class PaymentServiceTest {
         // Arrange
         when(courseRepository.findById("course1")).thenReturn(Optional.of(course));
         when(userRepository.findById("user1")).thenReturn(Optional.of(user));
+        when(paymentRepository.existsByUserAndCourse(user, course)).thenReturn(false);
 
-        // Manually create a VoucherResponse and set properties
         VoucherResponse voucherResponse = new VoucherResponse();
         voucherResponse.setId("voucher1");
         voucherResponse.setDiscountPercent(10);
-
         when(voucherService.getVoucherByCodeService("voucher1")).thenReturn(voucherResponse);
 
         PaymentData paymentData = mock(PaymentData.class);
         CheckoutResponseData checkoutResponseData = mock(CheckoutResponseData.class);
-        when(payOS.createPaymentLink(paymentData)).thenReturn(checkoutResponseData);
+        when(payOS.createPaymentLink(any(PaymentData.class))).thenReturn(checkoutResponseData);
         when(checkoutResponseData.getCheckoutUrl()).thenReturn("http://payment-url.com");
 
         Payment savedPayment = new Payment();
@@ -135,6 +134,18 @@ class PaymentServiceTest {
     }
 
     @Test
+    void createPayment_shouldThrowRuntimeException_whenUserHasAlreadyPurchasedCourse() {
+        // Arrange
+        when(courseRepository.findById("course1")).thenReturn(Optional.of(course));
+        when(userRepository.findById("user1")).thenReturn(Optional.of(user));
+        when(paymentRepository.existsByUserAndCourse(user, course)).thenReturn(true);
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> paymentService.createPayment(createPaymentRequest));
+        assertEquals("User has already purchased this course", exception.getMessage());
+    }
+
+    @Test
     void checkoutCart_shouldReturnPaymentResponse_whenPaymentIsSuccessful() throws Exception {
         // Arrange
         when(userRepository.findById("user1")).thenReturn(Optional.of(user));
@@ -144,7 +155,7 @@ class PaymentServiceTest {
 
         PaymentData paymentData = mock(PaymentData.class);
         CheckoutResponseData checkoutResponseData = mock(CheckoutResponseData.class);
-        when(payOS.createPaymentLink(paymentData)).thenReturn(checkoutResponseData);
+        when(payOS.createPaymentLink(any(PaymentData.class))).thenReturn(checkoutResponseData);
         when(checkoutResponseData.getCheckoutUrl()).thenReturn("http://payment-url.com");
 
         Payment savedPayment = new Payment();
@@ -152,12 +163,12 @@ class PaymentServiceTest {
         when(paymentRepository.save(any(Payment.class))).thenReturn(savedPayment);
 
         // Act
-        PaymentResponse paymentResponse = paymentService.checkoutCart("user1", "voucher1");
+        List<PaymentResponse> paymentResponse = paymentService.checkoutCart("user1", "voucher1");
 
         // Assert
         assertNotNull(paymentResponse);
-        assertEquals("payment1", paymentResponse.getId());
-        assertEquals("http://payment-url.com", paymentResponse.getPaymentUrl());
+        assertEquals("payment1", paymentResponse.get(0).getId());
+        assertEquals("http://payment-url.com", paymentResponse.get(0).getPaymentUrl());
     }
 
     @Test

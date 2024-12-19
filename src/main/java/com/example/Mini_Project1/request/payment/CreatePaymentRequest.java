@@ -7,6 +7,4 @@ public class CreatePaymentRequest {
   private String userId;
   private String courseId;
   private String voucherCode;
-  private String content;
-  private int status = 1;
 }

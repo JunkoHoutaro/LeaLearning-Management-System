@@ -49,4 +49,5 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
   List<Payment> findByCourse(Course course);
 
   boolean existsByVoucher(Voucher voucher);
+  boolean existsByUserAndCourse(User user, Course course);
 }
