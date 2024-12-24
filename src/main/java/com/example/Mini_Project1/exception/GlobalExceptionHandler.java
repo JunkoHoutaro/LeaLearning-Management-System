@@ -2,7 +2,6 @@ package com.example.Mini_Project1.exception;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -35,21 +34,30 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(BadRequestException.class)
   public ResponseEntity<ErrorResponse> handleBadRequestException(BadRequestException ex) {
-    ErrorResponse errorResponse = new ErrorResponse(
-            HttpStatus.BAD_REQUEST.value(),
-            "Invalid request",
-            ex.getMessage()
-    );
+    ErrorResponse errorResponse =
+        new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Invalid request", ex.getMessage());
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
   }
 
   @ExceptionHandler(NotFoundException.class)
   public ResponseEntity<ErrorResponse> handleNotFoundException(NotFoundException ex) {
-    ErrorResponse errorResponse = new ErrorResponse(
-            HttpStatus.NOT_FOUND.value(),
-            "Not found",
-            ex.getMessage()
-    );
+    ErrorResponse errorResponse =
+        new ErrorResponse(HttpStatus.NOT_FOUND.value(), "Not found", ex.getMessage());
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+  }
+
+  @ExceptionHandler(UserNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handleUserNotFoundException(UserNotFoundException ex) {
+    ErrorResponse errorResponse =
+        new ErrorResponse(HttpStatus.NOT_FOUND.value(), "User not found", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+  }
+
+  @ExceptionHandler(UserAlreadyExistsException.class)
+  public ResponseEntity<ErrorResponse> handleUserAlreadyExistsException(
+      UserAlreadyExistsException ex) {
+    ErrorResponse errorResponse =
+        new ErrorResponse(HttpStatus.CONFLICT.value(), "User already exists", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
   }
 }

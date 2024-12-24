@@ -1,21 +1,27 @@
 package com.example.Mini_Project1.controller;
 
-import com.example.Mini_Project1.request.token.TokenRequest;
+import com.example.Mini_Project1.exception.UserNotFoundException;
 import com.example.Mini_Project1.request.user.CreateUserRequest;
-import com.example.Mini_Project1.request.user.LoginRequest;
 import com.example.Mini_Project1.request.user.UpdateUserRequest;
-import com.example.Mini_Project1.response.user.TokenResponse;
 import com.example.Mini_Project1.response.user.UserResponse;
 import com.example.Mini_Project1.service.UserService;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/users")
 public class UserController {
+
   private final UserService userService;
 
   @GetMapping
@@ -25,9 +31,10 @@ public class UserController {
 
   @GetMapping("/{id}")
   public ResponseEntity<UserResponse> getUserById(@PathVariable String id) {
-    return userService.getUserById(id)
+    return userService
+        .getUserById(id)
         .map(ResponseEntity::ok)
-        .orElse(ResponseEntity.notFound().build());
+        .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
   }
 
   @PostMapping
@@ -36,8 +43,8 @@ public class UserController {
   }
 
   @PatchMapping("/{id}")
-  public ResponseEntity<UserResponse> updateUser(@PathVariable String id,
-      @RequestBody UpdateUserRequest updateUserRequest) {
+  public ResponseEntity<UserResponse> updateUser(
+      @PathVariable String id, @RequestBody UpdateUserRequest updateUserRequest) {
     return ResponseEntity.ok(userService.updateUser(id, updateUserRequest));
   }
 
