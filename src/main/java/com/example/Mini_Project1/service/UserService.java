@@ -2,6 +2,7 @@ package com.example.Mini_Project1.service;
 
 import com.example.Mini_Project1.entity.Token;
 import com.example.Mini_Project1.entity.User;
+import com.example.Mini_Project1.exception.UserNotFoundException;
 import com.example.Mini_Project1.repository.TokenRepository;
 import com.example.Mini_Project1.repository.UserRepository;
 import com.example.Mini_Project1.request.user.CreateUserRequest;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @AllArgsConstructor
 public class UserService {
+
   private final UserRepository userRepository;
   private final TokenRepository tokenRepository;
   private final ModelMapper modelMapper;
@@ -36,9 +38,8 @@ public class UserService {
         .collect(Collectors.toList());
   }
 
-  public Optional<UserResponse> getUserById(String id) {
-    return userRepository.findById(id)
-        .map(user -> modelMapper.map(user, UserResponse.class));
+  public Optional<UserResponse> getUserById(String userId) {
+    return userRepository.findById(userId).map(user -> modelMapper.map(user, UserResponse.class));
   }
 
   @Transactional
@@ -67,8 +68,10 @@ public class UserService {
 
   @Transactional
   public TokenResponse login(LoginRequest loginRequest) {
-    User user = userRepository.findByEmail(loginRequest.getEmail())
-        .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+    User user =
+        userRepository
+            .findByEmail(loginRequest.getEmail())
+            .orElseThrow(() -> new RuntimeException("Invalid email or password"));
     if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
       throw new RuntimeException("Invalid email or password");
     }
@@ -81,8 +84,8 @@ public class UserService {
       throw new RuntimeException("Invalid refresh token");
     }
     String userId = jwtTokenUtils.getUserIdFromToken(refreshToken);
-    User user = userRepository.findById(userId)
-        .orElseThrow(() -> new RuntimeException("User not found"));
+    User user =
+        userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
     String newAccessToken = jwtTokenUtils.createToken(user);
     String newRefreshToken = jwtTokenUtils.createRefreshToken(user);
     Token token = new Token();
@@ -99,40 +102,48 @@ public class UserService {
 
   @Transactional
   public void revokeToken(String refreshToken) {
-    Token token = tokenRepository.findByToken(refreshToken)
-        .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+    Token token =
+        tokenRepository
+            .findByToken(refreshToken)
+            .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
     tokenRepository.delete(token);
   }
 
   @Transactional
-public UserResponse updateUser(String id, UpdateUserRequest updateUserRequest) {
-    User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+  public UserResponse updateUser(String id, UpdateUserRequest updateUserRequest) {
+    User user =
+        userRepository
+            .findById(id)
+            .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
 
     if (updateUserRequest.getName() != null) {
-        user.setName(updateUserRequest.getName());
+      user.setName(updateUserRequest.getName());
     }
     if (updateUserRequest.getEmail() != null) {
-        user.setEmail(updateUserRequest.getEmail());
+      user.setEmail(updateUserRequest.getEmail());
     }
     if (updateUserRequest.getDob() != null) {
-        user.setDob(updateUserRequest.getDob());
+      user.setDob(updateUserRequest.getDob());
     }
     if (updateUserRequest.getPassword() != null && !updateUserRequest.getPassword().isEmpty()) {
-        user.setPassword(passwordEncoder.encode(updateUserRequest.getPassword()));
+      user.setPassword(passwordEncoder.encode(updateUserRequest.getPassword()));
     }
     if (updateUserRequest.getRole() != null) {
-        user.setRole(updateUserRequest.getRole());
+      user.setRole(updateUserRequest.getRole());
     }
     user.setUpdatedDate(new Date());
 
     return modelMapper.map(userRepository.save(user), UserResponse.class);
-}
+  }
 
   @Transactional
   public void deleteUser(String id) {
-    userRepository.deleteById(id);
+    User user =
+        userRepository
+            .findById(id)
+            .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
+    userRepository.delete(user);
   }
-
 
   @Transactional
   public TokenResponse googleLogin(OAuth2User oauth2User) {

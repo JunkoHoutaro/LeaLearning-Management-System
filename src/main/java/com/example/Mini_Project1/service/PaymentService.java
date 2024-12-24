@@ -89,7 +89,7 @@ public class PaymentService {
     Long orderCode;
     try {
       final String productName = course.getName();
-      final String description = "Payment for " + productName;
+      final String description = productName;
       final String returnUrl = "http://your-return-url.com";
       final String cancelUrl = "http://your-cancel-url.com";
       // Generate order code
