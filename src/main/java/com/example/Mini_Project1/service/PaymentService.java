@@ -6,7 +6,7 @@ import com.example.Mini_Project1.entity.Payment;
 import com.example.Mini_Project1.entity.User;
 import com.example.Mini_Project1.entity.UserUsedVoucher;
 import com.example.Mini_Project1.entity.Voucher;
-import com.example.Mini_Project1.exception.NotFoundException;
+import com.example.Mini_Project1.exception.*;
 import com.example.Mini_Project1.repository.CartRepository;
 import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.repository.PaymentRepository;
@@ -32,6 +32,7 @@ import vn.payos.type.PaymentData;
 @Service
 @AllArgsConstructor
 public class PaymentService {
+
   private static final Logger logger = LoggerFactory.getLogger(PaymentService.class);
   private final CartRepository cartRepository;
   private final PaymentRepository paymentRepository;
@@ -51,15 +52,15 @@ public class PaymentService {
     Course course =
         courseRepository
             .findById(request.getCourseId())
-            .orElseThrow(() -> new NotFoundException("Course not found"));
+            .orElseThrow(() -> new CourseNotFoundException("Course not found"));
     User user =
         userRepository
             .findById(request.getUserId())
-            .orElseThrow(() -> new NotFoundException("User not found"));
+            .orElseThrow(() -> new UserNotFoundException("User not found"));
 
     // Check if the user has already purchased the course
     if (paymentRepository.existsByUserAndCourse(user, course)) {
-      throw new RuntimeException("User has already purchased this course");
+      throw new CourseAlreadyPurchasedException("User has already purchased this course");
     }
 
     Voucher voucher = null;
@@ -70,7 +71,7 @@ public class PaymentService {
 
       // Check if the user has already used the voucher
       if (userUsedVoucherRepository.existsByUserAndVoucher(user, voucher)) {
-        throw new RuntimeException("User has already used this voucher");
+        throw new VoucherAlreadyUsedException("User has already used this voucher");
       }
     }
 
@@ -82,7 +83,7 @@ public class PaymentService {
     float finalPrice = priceAfterDiscount - (voucherDiscount / 100 * priceAfterDiscount);
 
     if (finalPrice < 0) {
-      throw new RuntimeException("Final price cannot be negative");
+      throw new NegativePriceException("Final price cannot be negative");
     }
 
     String paymentUrl;
@@ -110,7 +111,7 @@ public class PaymentService {
       paymentUrl = data.getCheckoutUrl();
     } catch (Exception e) {
       logger.error("Failed to create payment link", e);
-      throw new RuntimeException("Failed to create payment link", e);
+      throw new PaymentLinkCreationException("Failed to create payment link", e);
     }
 
     Payment newPayment =
@@ -142,10 +143,12 @@ public class PaymentService {
   @Transactional
   public List<PaymentResponse> checkoutCart(String userId, String voucherCode) {
     User user =
-        userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserNotFoundException("User not found"));
     Cart cart = cartRepository.findByUserId(userId);
     if (cart == null || cart.getCourseIds().isEmpty()) {
-      throw new RuntimeException("Cart is empty");
+      throw new EmptyCartException("Cart is empty");
     }
 
     List<PaymentResponse> paymentResponses = new ArrayList<>();
@@ -155,7 +158,7 @@ public class PaymentService {
       VoucherResponse voucherResponse = voucherService.getVoucherByCodeService(voucherCode);
       voucher = modelMapper.map(voucherResponse, Voucher.class);
       if (voucher != null && userUsedVoucherRepository.existsByUserAndVoucher(user, voucher)) {
-        throw new RuntimeException("User has already used this voucher");
+        throw new VoucherAlreadyUsedException("User has already used this voucher");
       }
     }
 
@@ -163,7 +166,8 @@ public class PaymentService {
       Course course =
           courseRepository
               .findById(courseId)
-              .orElseThrow(() -> new RuntimeException("Course not found"));
+              .orElseThrow(
+                  () -> new CourseNotFoundException("Course not found with id: " + courseId));
       float coursePrice = course.getPrice() - course.getDiscount() * course.getPrice();
 
       if (voucher != null) {
@@ -172,7 +176,7 @@ public class PaymentService {
       }
 
       if (coursePrice < 0) {
-        throw new RuntimeException("Final price cannot be negative");
+        throw new NegativePriceException("Final price cannot be negative");
       }
 
       Long orderCode;
@@ -201,7 +205,7 @@ public class PaymentService {
         orderCode = data.getOrderCode();
       } catch (Exception e) {
         logger.error("Failed to create payment link", e);
-        throw new RuntimeException("Failed to create payment link", e);
+        throw new PaymentLinkCreationException("Failed to create payment link", e);
       }
 
       Payment payment =
@@ -212,7 +216,6 @@ public class PaymentService {
               .status(1)
               .paymentUrl(paymentUrl)
               .voucher(voucher)
-              .discount(voucher != null ? voucher.getDiscountPercent() : 0)
               .content(orderCode.toString())
               .createdDate(new Date())
               .updatedDate(new Date())
