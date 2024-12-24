@@ -132,4 +132,11 @@ public class GlobalExceptionHandler {
         new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Voucher already used", ex.getMessage());
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
   }
+
+  @ExceptionHandler(PaymentNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handlePaymentNotFoundException(PaymentNotFoundException ex) {
+    ErrorResponse errorResponse =
+        new ErrorResponse(HttpStatus.NOT_FOUND.value(), "Payment not found", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+  }
 }

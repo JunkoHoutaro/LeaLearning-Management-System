@@ -6,7 +6,14 @@ import com.example.Mini_Project1.entity.Payment;
 import com.example.Mini_Project1.entity.User;
 import com.example.Mini_Project1.entity.UserUsedVoucher;
 import com.example.Mini_Project1.entity.Voucher;
-import com.example.Mini_Project1.exception.*;
+import com.example.Mini_Project1.exception.CourseAlreadyPurchasedException;
+import com.example.Mini_Project1.exception.CourseNotFoundException;
+import com.example.Mini_Project1.exception.EmptyCartException;
+import com.example.Mini_Project1.exception.NegativePriceException;
+import com.example.Mini_Project1.exception.PaymentLinkCreationException;
+import com.example.Mini_Project1.exception.PaymentNotFoundException;
+import com.example.Mini_Project1.exception.UserNotFoundException;
+import com.example.Mini_Project1.exception.VoucherAlreadyUsedException;
 import com.example.Mini_Project1.repository.CartRepository;
 import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.repository.PaymentRepository;
@@ -14,6 +21,7 @@ import com.example.Mini_Project1.repository.UserRepository;
 import com.example.Mini_Project1.repository.UserUsedVoucherRepository;
 import com.example.Mini_Project1.request.payment.CreatePaymentRequest;
 import com.example.Mini_Project1.response.payment.PaymentResponse;
+import com.example.Mini_Project1.response.payment.PaymentStatusResponse;
 import com.example.Mini_Project1.response.voucher.VoucherResponse;
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
@@ -28,6 +36,7 @@ import vn.payos.PayOS;
 import vn.payos.type.CheckoutResponseData;
 import vn.payos.type.ItemData;
 import vn.payos.type.PaymentData;
+import vn.payos.type.PaymentLinkData;
 
 @Service
 @AllArgsConstructor
@@ -162,6 +171,7 @@ public class PaymentService {
       }
     }
 
+    float totalPrice = 0;
     for (String courseId : cart.getCourseIds()) {
       Course course =
           courseRepository
@@ -179,33 +189,48 @@ public class PaymentService {
         throw new NegativePriceException("Final price cannot be negative");
       }
 
-      Long orderCode;
-      String paymentUrl;
+      totalPrice += coursePrice;
+    }
 
-      try {
-        String productName = course.getName();
-        String description = course.getName();
-        String returnUrl = "http://your-return-url.com";
-        String cancelUrl = "http://your-cancel-url.com";
-        String currentTimeString = String.valueOf(new Date().getTime());
-        orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
-        ItemData item =
-            ItemData.builder().name(productName).quantity(1).price((int) coursePrice).build();
-        PaymentData paymentData =
-            PaymentData.builder()
-                .orderCode(orderCode)
-                .amount((int) coursePrice)
-                .description(description)
-                .returnUrl(returnUrl)
-                .cancelUrl(cancelUrl)
-                .item(item)
-                .build();
-        CheckoutResponseData data = payOS.createPaymentLink(paymentData);
-        paymentUrl = data.getCheckoutUrl();
-        orderCode = data.getOrderCode();
-      } catch (Exception e) {
-        logger.error("Failed to create payment link", e);
-        throw new PaymentLinkCreationException("Failed to create payment link", e);
+    Long orderCode;
+    String paymentUrl;
+
+    try {
+      String productName = "Courses Purchase";
+      String description = "Multiple courses purchase";
+      String returnUrl = "http://your-return-url.com";
+      String cancelUrl = "http://your-cancel-url.com";
+      String currentTimeString = String.valueOf(new Date().getTime());
+      orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
+      ItemData item =
+          ItemData.builder().name(productName).quantity(1).price((int) totalPrice).build();
+      PaymentData paymentData =
+          PaymentData.builder()
+              .orderCode(orderCode)
+              .amount((int) totalPrice)
+              .description(description)
+              .returnUrl(returnUrl)
+              .cancelUrl(cancelUrl)
+              .item(item)
+              .build();
+      CheckoutResponseData data = payOS.createPaymentLink(paymentData);
+      paymentUrl = data.getCheckoutUrl();
+    } catch (Exception e) {
+      logger.error("Failed to create payment link", e);
+      throw new PaymentLinkCreationException("Failed to create payment link", e);
+    }
+
+    for (String courseId : cart.getCourseIds()) {
+      Course course =
+          courseRepository
+              .findById(courseId)
+              .orElseThrow(
+                  () -> new CourseNotFoundException("Course not found with id: " + courseId));
+      float coursePrice = course.getPrice() - course.getDiscount() * course.getPrice();
+
+      if (voucher != null) {
+        float discount = coursePrice * voucher.getDiscountPercent() / 100;
+        coursePrice -= discount;
       }
 
       Payment payment =
@@ -238,5 +263,34 @@ public class PaymentService {
     cartRepository.save(cart);
 
     return paymentResponses;
+  }
+
+  public PaymentStatusResponse checkPaymentStatus(String userId, String courseId) {
+    userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("User not found"));
+    Payment payment = paymentRepository.findByUserIdAndCourseId(userId, courseId);
+    if (payment == null) {
+      throw new PaymentNotFoundException("Payment not found");
+    }
+
+    Long orderCode = Long.parseLong(payment.getContent());
+    PaymentLinkData paymentLinkData;
+    try {
+      paymentLinkData = payOS.getPaymentLinkInformation(orderCode);
+    } catch (Exception e) {
+      logger.error("Failed to get payment link information", e);
+      throw new PaymentNotFoundException("Payment not found");
+    }
+    if (paymentLinkData == null) {
+      throw new PaymentNotFoundException("Payment not found");
+    }
+
+    switch (paymentLinkData.getStatus().toLowerCase()) {
+      case "cancelled" -> payment.setStatus(2);
+      case "paid" -> payment.setStatus(3);
+      case "pending" -> payment.setStatus(1);
+      default -> payment.setStatus(0);
+    }
+
+    return new PaymentStatusResponse(paymentLinkData.getStatus(), paymentLinkData.getAmount());
   }
 }
