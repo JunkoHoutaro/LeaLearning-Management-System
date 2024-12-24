@@ -3,6 +3,12 @@ package com.example.Mini_Project1.service;
 import com.example.Mini_Project1.entity.Cart;
 import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.User;
+import com.example.Mini_Project1.exception.CartNotFoundException;
+import com.example.Mini_Project1.exception.CourseAlreadyInCartException;
+import com.example.Mini_Project1.exception.CourseAlreadyPurchasedException;
+import com.example.Mini_Project1.exception.CourseNotFoundException;
+import com.example.Mini_Project1.exception.CourseNotInCartException;
+import com.example.Mini_Project1.exception.UserNotFoundException;
 import com.example.Mini_Project1.repository.CartRepository;
 import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.repository.PaymentRepository;
@@ -17,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @AllArgsConstructor
 public class CartService {
+
   private final CartRepository cartRepository;
   private final UserRepository userRepository;
   private final CourseRepository courseRepository;
@@ -26,15 +33,17 @@ public class CartService {
   @Transactional
   public CartResponse addCourseToCart(String userId, String courseId) {
     User user =
-        userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserNotFoundException("User not found"));
     Course course =
         courseRepository
             .findById(courseId)
-            .orElseThrow(() -> new RuntimeException("Course not found"));
+            .orElseThrow(() -> new CourseNotFoundException("Course not found"));
 
     // Check if the user has already purchased the course
     if (paymentRepository.existsByUserAndCourse(user, course)) {
-      throw new RuntimeException("User has already purchased this course");
+      throw new CourseAlreadyPurchasedException("User has already purchased this course");
     }
 
     Cart cart = cartRepository.findByUserId(userId);
@@ -43,7 +52,7 @@ public class CartService {
     }
 
     if (cart.getCourseIds().contains(courseId)) {
-      throw new RuntimeException("Course already in cart");
+      throw new CourseAlreadyInCartException("Course already in cart");
     }
 
     cart.getCourseIds().add(courseId);
@@ -54,11 +63,11 @@ public class CartService {
   public CartResponse removeCourseFromCart(String userId, String courseId) {
     Cart cart = cartRepository.findByUserId(userId);
     if (cart == null) {
-      throw new RuntimeException("Cart not found");
+      throw new CartNotFoundException("Cart not found for user id: " + userId);
     }
 
     if (!cart.getCourseIds().contains(courseId)) {
-      throw new RuntimeException("Course not in cart");
+      throw new CourseNotInCartException("Course not in cart");
     }
 
     cart.getCourseIds().remove(courseId);
@@ -67,12 +76,17 @@ public class CartService {
 
   public CartResponse getCart(String cartId) {
     Cart cart =
-        cartRepository.findById(cartId).orElseThrow(() -> new RuntimeException("Cart not found"));
+        cartRepository
+            .findById(cartId)
+            .orElseThrow(() -> new CartNotFoundException("Cart not found with id: " + cartId));
     return mapCartToCartResponse(cart);
   }
 
   public CartResponse getCartByUserId(String userId) {
     Cart cart = cartRepository.findByUserId(userId);
+    if (cart == null) {
+      throw new CartNotFoundException("Cart not found for user id: " + userId);
+    }
     return mapCartToCartResponse(cart);
   }
 
@@ -83,7 +97,8 @@ public class CartService {
       Course course =
           courseRepository
               .findById(courseId)
-              .orElseThrow(() -> new RuntimeException("Course not found"));
+              .orElseThrow(
+                  () -> new CourseNotFoundException("Course not found with id: " + courseId));
       totalPrice += course.getPrice();
     }
     cartResponse.setTotalPrice(totalPrice);
