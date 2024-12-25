@@ -49,7 +49,7 @@ class ChapterControllerTest {
 
     @Test
     void createChapter_Success() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, "New Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"New Chapter");
 
         when(chapterService.createChapter(request)).thenReturn(mockChapterResponse);
 
@@ -102,7 +102,7 @@ class ChapterControllerTest {
 
     @Test
     void createChapter_InvalidCourseId() {
-        CreateChapterRequest request = new CreateChapterRequest(null, "Invalid Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(null, 1,"Invalid Chapter");
 
         when(chapterService.createChapter(request)).thenThrow(new IllegalArgumentException("Course ID cannot be null"));
 
@@ -141,7 +141,7 @@ class ChapterControllerTest {
 
     @Test
     void createChapter_MissingName() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, "");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"");
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             chapterController.createNewChapter(request);
@@ -152,7 +152,7 @@ class ChapterControllerTest {
 
     @Test
     void createChapter_ServiceError() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, "New Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"New Chapter");
 
         when(chapterService.createChapter(request)).thenThrow(new RuntimeException("Internal Server Error"));
 
@@ -165,7 +165,7 @@ class ChapterControllerTest {
 
     @Test
     void createChapter_ChapterAlreadyExists() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, "Existing Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"Existing Chapter");
 
         when(chapterService.createChapter(request)).thenThrow(new IllegalArgumentException("Chapter already exists"));
 
@@ -178,7 +178,7 @@ class ChapterControllerTest {
 
     @Test
     void createChapter_Unauthorized() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, "New Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"New Chapter");
 
         when(chapterService.createChapter(request)).thenThrow(new SecurityException("Unauthorized"));
 

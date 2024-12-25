@@ -42,7 +42,7 @@ class LessonControllerTest {
 
     @Test
     void createLesson_Success() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, "New Lesson", "resourceUrl", "videoUrl", 1);
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"New Lesson", "resourceUrl", "videoUrl", 1);
 
         when(lessonService.createLesson(request)).thenReturn(mockLessonResponse);
 
@@ -92,7 +92,7 @@ class LessonControllerTest {
 
     @Test
     void createLesson_InvalidData() {
-        CreateLessonRequest request = new CreateLessonRequest(null, "", "resourceUrl", "videoUrl", 1); // Dữ liệu không
+        CreateLessonRequest request = new CreateLessonRequest(null,1, "", "resourceUrl", "videoUrl", 1); // Dữ liệu không
                                                                                                        // hợp lệ
 
         when(lessonService.createLesson(request)).thenThrow(new IllegalArgumentException("Invalid data"));
@@ -150,7 +150,7 @@ class LessonControllerTest {
 
     @Test
     void createLesson_ChapterNotFound() {
-        CreateLessonRequest request = new CreateLessonRequest(UUID.randomUUID(), "New Lesson", "resourceUrl",
+        CreateLessonRequest request = new CreateLessonRequest(UUID.randomUUID(), 1,"New Lesson", "resourceUrl",
                 "videoUrl", 1);
 
         when(lessonService.createLesson(request)).thenThrow(new RuntimeException("Chapter not found"));

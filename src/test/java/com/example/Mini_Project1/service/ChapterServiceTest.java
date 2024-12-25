@@ -72,7 +72,7 @@ class ChapterServiceTest {
 
     @Test
     void createChapter_Success() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, "New Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"New Chapter");
 
         when(courseRepository.findById(courseId.toString())).thenReturn(Optional.of(mockCourse));
         when(modelMapper.map(request, Chapter.class)).thenReturn(mockChapter);
@@ -146,7 +146,7 @@ class ChapterServiceTest {
 
     @Test
     void createChapter_CourseNotFound() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, "New Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"New Chapter");
 
         when(courseRepository.findById(courseId.toString())).thenReturn(Optional.empty());
 
@@ -208,7 +208,7 @@ class ChapterServiceTest {
 
     @Test
     void createChapter_SaveFailure() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, "New Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"New Chapter");
 
         when(courseRepository.findById(courseId.toString())).thenReturn(Optional.of(mockCourse));
         when(modelMapper.map(request, Chapter.class)).thenReturn(mockChapter);

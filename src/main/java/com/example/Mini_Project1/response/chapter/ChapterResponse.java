@@ -15,6 +15,8 @@ public class ChapterResponse implements Serializable {
 
     private String id;
 
+    private Integer index;
+
     private String name;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

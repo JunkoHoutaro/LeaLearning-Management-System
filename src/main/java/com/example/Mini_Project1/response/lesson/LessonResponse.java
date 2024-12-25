@@ -17,6 +17,8 @@ public class LessonResponse implements Serializable {
 
     private String name;
 
+    private Integer index;
+
     private String resourceUrl;
 
     private String videoUrl;

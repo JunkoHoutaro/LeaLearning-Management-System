@@ -3,6 +3,7 @@ package com.example.Mini_Project1.service;
 import com.example.Mini_Project1.entity.Chapter;
 import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.Lesson;
+import com.example.Mini_Project1.exception.BadRequestException;
 import com.example.Mini_Project1.repository.ChapterRepository;
 import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.repository.LessonRepository;
@@ -13,6 +14,7 @@ import com.example.Mini_Project1.response.chapter.ChapterResponse;
 import com.example.Mini_Project1.response.lesson.LessonResponse;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.hibernate.Hibernate;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 
@@ -34,10 +36,12 @@ public class ChapterService {
 
     @Transactional
     public ChapterResponse createChapter(CreateChapterRequest request) {
-
         Course course = courseRepository.findById(request.getCourseId().toString())
                 .orElseThrow(
                         () -> new RuntimeException("Course not found with ID: " + request.getCourseId().toString()));
+
+        if(chapterRepository.existsByCourseIdAndIndex(request.getCourseId().toString(), request.getIndex()))
+            throw new BadRequestException("This course already has chapter with index " + request.getIndex());
 
         Chapter chapter = modelMapper.map(request, Chapter.class);
 
@@ -64,6 +68,13 @@ public class ChapterService {
         Chapter chapter = chapterRepository.findById(request.getChapterId().toString())
                 .orElseThrow(
                         () -> new RuntimeException("Chapter not found with ID: " + request.getChapterId().toString()));
+
+        if(request.getName() != null && request.getName().isBlank())
+            throw new BadRequestException("Name cannot be empty");
+
+        Hibernate.initialize(chapter.getCourse());
+        if(chapterRepository.existsByCourseIdAndIndex(chapter.getCourse().getId(), request.getIndex()))
+            throw new BadRequestException("This course already has chapter with index " + request.getIndex());
 
         modelMapper.map(request, chapter);
 
