@@ -28,6 +28,7 @@ public class Chapter {
   @GeneratedValue(strategy = GenerationType.UUID)
   private String id;
 
+  private Integer index;
   private String name;
   private Date createdDate;
   private Date updatedDate;

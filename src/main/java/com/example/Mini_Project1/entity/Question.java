@@ -22,6 +22,7 @@ public class Question {
   @GeneratedValue(strategy = GenerationType.UUID)
   private String id;
 
+  private Integer index;
   private String options;
   private char correct;
   private String content;

@@ -25,6 +25,7 @@ public class Lesson {
   @GeneratedValue(strategy = GenerationType.UUID)
   private String id;
 
+  private Integer index;
   private String name;
   private String resource_url;
   private String video_url;

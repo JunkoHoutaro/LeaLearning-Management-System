@@ -2,6 +2,7 @@ package com.example.Mini_Project1.service;
 
 import com.example.Mini_Project1.entity.Question;
 import com.example.Mini_Project1.entity.Quizz;
+import com.example.Mini_Project1.exception.BadRequestException;
 import com.example.Mini_Project1.repository.QuestionRepository;
 import com.example.Mini_Project1.repository.QuizzRepository;
 import com.example.Mini_Project1.request.QuizzAndQuestion.CreateQuestionRequest;
@@ -33,6 +34,9 @@ public class QuestionService {
     public QuestionResponse createQuestionService(CreateQuestionRequest request){
         Quizz quizz = quizzRepository.findById(request.getQuizzId().toString()).orElseThrow
                 (()-> new RuntimeException("Quizz not found with id " + request.getQuizzId().toString()));
+
+        if(quesRepository.existsByQuizzIdAndIndex(request.getQuizzId().toString(), request.getIndex()))
+            throw new BadRequestException("This quiz already has question with index " + request.getIndex());
 
         if(quesRepository.existsByContentAndQuizz(request.getContent().trim(), quizz))
             throw new RuntimeException("This question has already exist on this quizz");
@@ -67,11 +71,16 @@ public class QuestionService {
                 () -> new RuntimeException("Question not found with id " + request.getQuestionId()));
         Quizz quizz = quizzRepository.findById(question.getQuizz().getId().toString()).orElseThrow(
                 () -> new RuntimeException("Quizz not found with id " + question.getQuizz().getId().toString()));
+
+        if(quesRepository.existsByQuizzIdAndIndex(quizz.getId(), request.getIndex()))
+            throw new BadRequestException("This quiz already has question with index " + request.getIndex());
+
         if (request.getContent() != null && quesRepository.existsByContentAndQuizz(request.getContent(), quizz)) {
             throw new RuntimeException("This question has already exist on this quizz");
         }
         quizz.setUpdatedDate(new Date());
-        question.setOptions(request.getOptions().toString());
+        if(request.getOptions() != null)
+            question.setOptions(request.getOptions().toString());
 
         ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration().setSkipNullEnabled(true);
