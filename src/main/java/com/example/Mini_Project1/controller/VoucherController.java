@@ -10,75 +10,99 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/vouchers")
 @AllArgsConstructor
 public class VoucherController {
 
-    private VoucherService voucherService;
+  private VoucherService voucherService;
 
-    // create voucher
-    @PostMapping(value = "insert", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Create a new voucher")
-    @ApiResponse(responseCode = "200", description = "Create successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid request body", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<VoucherResponse>  createVoucher(@Valid @RequestBody CreateVoucherRequest request){
-        return ResponseEntity.ok(voucherService.createVoucherService(request));
-    }
+  // create voucher
+  @PostMapping(value = "insert", produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasRole('ADMIN')")
+  @Operation(summary = "Create a new voucher")
+  @ApiResponse(responseCode = "200", description = "Create successfully")
+  @ApiResponse(
+      responseCode = "400",
+      description = "Invalid request body",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(
+      responseCode = "404",
+      description = "Not found",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  public ResponseEntity<VoucherResponse> createVoucher(
+      @Valid @RequestBody CreateVoucherRequest request) {
+    return ResponseEntity.ok(voucherService.createVoucherService(request));
+  }
 
-    // get all voucher
-    @GetMapping(value = "get-all-vouchers", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get all vouchers")
-    @ApiResponse(responseCode = "200", description = "Get successfully")
-    public ResponseEntity<List<VoucherResponse>> getAllVouchers() {
-        return ResponseEntity.ok(voucherService.getAllVouchersService());
-    }
+  // get all voucher
+  @GetMapping(value = "get-all-vouchers", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Operation(summary = "Get all vouchers")
+  @ApiResponse(responseCode = "200", description = "Get successfully")
+  public ResponseEntity<List<VoucherResponse>> getAllVouchers() {
+    return ResponseEntity.ok(voucherService.getAllVouchersService());
+  }
 
-    // get voucher by name
-    @GetMapping(value = "get-by-name", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get voucher by name")
-    @ApiResponse(responseCode = "200", description = "Get successfully")
-    public ResponseEntity<List<VoucherResponse>> getVoucherByName(@RequestParam(required = false) String name){
-        return ResponseEntity.ok(voucherService.getVoucherByNameService(name));
-    }
+  // get voucher by name
+  @GetMapping(value = "get-by-name", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Operation(summary = "Get voucher by name")
+  @ApiResponse(responseCode = "200", description = "Get successfully")
+  public ResponseEntity<List<VoucherResponse>> getVoucherByName(
+      @RequestParam(required = false) String name) {
+    return ResponseEntity.ok(voucherService.getVoucherByNameService(name));
+  }
 
-    // get voucher by code
-    @GetMapping(value = "get-by-code", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get voucher by code")
-    @ApiResponse(responseCode = "200", description = "Get successfully")
-    public ResponseEntity<VoucherResponse> getVoucherByCode(@RequestParam String code){
-        return ResponseEntity.ok(voucherService.getVoucherByCodeService(code));
-    }
+  // get voucher by code
+  @GetMapping(value = "get-by-code", produces = MediaType.APPLICATION_JSON_VALUE)
+  @Operation(summary = "Get voucher by code")
+  @ApiResponse(responseCode = "200", description = "Get successfully")
+  public ResponseEntity<VoucherResponse> getVoucherByCode(@RequestParam String code) {
+    return ResponseEntity.ok(voucherService.getVoucherByCodeService(code));
+  }
 
-    //update
-    @PatchMapping(value = "update", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Update  a voucher")
-    @ApiResponse(responseCode = "200", description = "Update successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid request body", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<VoucherResponse> updateVoucher(@Valid @RequestBody UpdateVoucherRequest request) {
-        return ResponseEntity.ok(voucherService.updateVoucherService(request));
-    }
+  // update
+  @PatchMapping(value = "update", produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasRole('ADMIN')")
+  @Operation(summary = "Update  a voucher")
+  @ApiResponse(responseCode = "200", description = "Update successfully")
+  @ApiResponse(
+      responseCode = "400",
+      description = "Invalid request body",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(
+      responseCode = "404",
+      description = "Not found",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  public ResponseEntity<VoucherResponse> updateVoucher(
+      @Valid @RequestBody UpdateVoucherRequest request) {
+    return ResponseEntity.ok(voucherService.updateVoucherService(request));
+  }
 
-    // delete
-    @DeleteMapping(value = "delete", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Delete a voucher")
-    @ApiResponse(responseCode = "200", description = "Delete successfully")
-    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<VoucherResponse> deleteVoucher(@RequestParam UUID voucherId) {
-        return ResponseEntity.ok(voucherService.deleteVoucherService(voucherId));
-    }
+  // delete
+  @DeleteMapping(value = "delete", produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasRole('ADMIN')")
+  @Operation(summary = "Delete a voucher")
+  @ApiResponse(responseCode = "200", description = "Delete successfully")
+  @ApiResponse(
+      responseCode = "404",
+      description = "Not found",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  public ResponseEntity<VoucherResponse> deleteVoucher(@RequestParam UUID voucherId) {
+    return ResponseEntity.ok(voucherService.deleteVoucherService(voucherId));
+  }
 }
