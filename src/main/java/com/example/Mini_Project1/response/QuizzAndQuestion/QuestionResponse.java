@@ -11,6 +11,7 @@ import java.io.Serializable;
 @Setter
 public class QuestionResponse implements Serializable {
     private String id;
+    private Integer index;
     private String options;
     private char correct;
     private String content;

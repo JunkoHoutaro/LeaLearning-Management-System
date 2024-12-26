@@ -12,4 +12,6 @@ public interface ChapterRepository extends JpaRepository<Chapter, String> {
     boolean existsByNameAndCourse(String name, Course course);
 
     List<Chapter> getChapterByCourseId(String courseId);
+
+    boolean existsByCourseIdAndIndex(String courseId, int index);
 }

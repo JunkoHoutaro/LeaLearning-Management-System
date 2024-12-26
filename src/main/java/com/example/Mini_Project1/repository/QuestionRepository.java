@@ -14,4 +14,5 @@ public interface QuestionRepository extends JpaRepository<Question, String> {
     List<Question> findByCorrect(Character correct);
     List<Question> findByQuizz(Quizz quizz);
     List<Question> findByQuizzAndCorrect(Quizz quizz, Character correct);
+    boolean existsByQuizzIdAndIndex(String quizzId, Integer index);
 }

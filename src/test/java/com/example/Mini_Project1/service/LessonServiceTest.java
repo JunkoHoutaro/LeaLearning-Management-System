@@ -55,7 +55,7 @@ class LessonServiceTest {
 
     @Test
     void createLesson_Success() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, "New Lesson", "resourceUrl", "videoUrl", 1);
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"New Lesson", "resourceUrl", "videoUrl", 1);
 
         Chapter chapter = new Chapter();
         chapter.setId(chapterId.toString());
@@ -133,7 +133,7 @@ class LessonServiceTest {
     @Test
     void createLesson_ChapterNotFound() {
         UUID invalidChapterId = UUID.randomUUID();
-        CreateLessonRequest request = new CreateLessonRequest(invalidChapterId, "New Lesson", "resourceUrl", "videoUrl",
+        CreateLessonRequest request = new CreateLessonRequest(invalidChapterId, 1,"New Lesson", "resourceUrl", "videoUrl",
                 1);
 
         when(chapterRepository.findById(invalidChapterId.toString())).thenReturn(java.util.Optional.empty());
@@ -186,7 +186,7 @@ class LessonServiceTest {
 
     @Test
     void createLesson_DatabaseError() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, "New Lesson", "resourceUrl", "videoUrl", 1);
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"New Lesson", "resourceUrl", "videoUrl", 1);
 
         Chapter chapter = new Chapter();
         chapter.setId(chapterId.toString());
@@ -216,7 +216,7 @@ class LessonServiceTest {
 
     @Test
     void createLesson_InvalidData() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, "", "resourceUrl", "videoUrl", 1);
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"", "resourceUrl", "videoUrl", 1);
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             lessonService.createLesson(request);
         });
@@ -226,7 +226,7 @@ class LessonServiceTest {
 
     @Test
     void createLesson_InternalError() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, "New Lesson", "resourceUrl", "videoUrl", 1);
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"New Lesson", "resourceUrl", "videoUrl", 1);
 
         Chapter chapter = new Chapter();
         chapter.setId(chapterId.toString());
@@ -243,7 +243,7 @@ class LessonServiceTest {
 
     @Test
     void createLesson_NameEmpty() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, "", "resourceUrl", "videoUrl", 1);
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"", "resourceUrl", "videoUrl", 1);
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             lessonService.createLesson(request);
         });

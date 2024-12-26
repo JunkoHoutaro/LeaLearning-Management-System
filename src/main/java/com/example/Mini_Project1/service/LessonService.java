@@ -11,6 +11,7 @@ import com.example.Mini_Project1.request.lesson.UpdateLessonRequest;
 import com.example.Mini_Project1.response.file.FileResponse;
 import com.example.Mini_Project1.response.lesson.LessonResponse;
 import jakarta.transaction.Transactional;
+import org.hibernate.Hibernate;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.modelmapper.TypeToken;
@@ -37,6 +38,9 @@ public class LessonService {
     public LessonResponse createLesson(CreateLessonRequest request) {
         Chapter chapter = chapterRepository.findById(request.getChapterId().toString()).orElseThrow(
                 () -> new RuntimeException("Chapter not found with ID: " + request.getChapterId().toString()));
+
+        if(lessonRepository.existsByChapterIdAndIndex(request.getChapterId().toString(), request.getIndex()))
+            throw new BadRequestException("This chapter already has lesson with index " + request.getIndex());
 
         ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration().setSkipNullEnabled(true);
@@ -67,9 +71,17 @@ public class LessonService {
         Lesson lesson = lessonRepository.findById(request.getLessonId().toString()).orElseThrow(
                 () -> new RuntimeException("Lesson not found with ID: " + request.getLessonId().toString()));
 
+        if(request.getName() != null && request.getName().isBlank())
+            throw new BadRequestException("Lesson's name cannot be empty");
+
+        Hibernate.initialize(lesson.getChapter());
+        if(lessonRepository.existsByChapterIdAndIndex(lesson.getChapter().getId(), request.getIndex()))
+            throw new BadRequestException("This chapter already has lesson with index " + request.getIndex());
+
         lesson.setUpdatedDate(new Date());
 
         ModelMapper modelMapper = new ModelMapper();
+        modelMapper.getConfiguration().setSkipNullEnabled(true);
         modelMapper.map(request, lesson);
 
         Lesson updatedLesson = lessonRepository.save(lesson);

@@ -2,6 +2,7 @@ package com.example.Mini_Project1.request.lesson;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -16,7 +17,9 @@ public class UpdateLessonRequest {
     @NotNull(message = "Lesson id is required")
     private UUID lessonId;
 
-    @NotBlank(message = "Lesson name is required")
+    @Positive(message = "Lesson index must be greater than 0")
+    private Integer index;
+
     private String name;
 
     private String resourceUrl;
@@ -24,7 +27,4 @@ public class UpdateLessonRequest {
     private String videoUrl;
 
     private Integer isDemo;
-
-    // @NotNull(message = "Chapter id is required")
-    // private UUID chapterId;
 }

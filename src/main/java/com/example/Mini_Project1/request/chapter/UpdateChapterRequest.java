@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -16,7 +17,8 @@ public class UpdateChapterRequest {
     @NotNull(message = "Chapter id is required")
     private UUID chapterId;
 
-    @NotBlank(message = "Chapter name is required")
-    private String name;
+    @Positive(message = "Chapter index must be greater than 0.")
+    private Integer index;
 
+    private String name;
 }
