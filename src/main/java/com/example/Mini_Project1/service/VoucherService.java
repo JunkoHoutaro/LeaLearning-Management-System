@@ -1,13 +1,11 @@
 package com.example.Mini_Project1.service;
 
-import com.example.Mini_Project1.entity.Question;
 import com.example.Mini_Project1.entity.Voucher;
+import com.example.Mini_Project1.exception.BadRequestException;
+import com.example.Mini_Project1.exception.NotFoundException;
 import com.example.Mini_Project1.repository.VoucherRepository;
-import com.example.Mini_Project1.request.QuizzAndQuestion.UpdateQuestionRequest;
 import com.example.Mini_Project1.request.voucher.CreateVoucherRequest;
 import com.example.Mini_Project1.request.voucher.UpdateVoucherRequest;
-import com.example.Mini_Project1.response.QuizzAndQuestion.QuestionResponse;
-import com.example.Mini_Project1.response.course.CourseResponse;
 import com.example.Mini_Project1.response.voucher.VoucherResponse;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -28,7 +26,7 @@ public class VoucherService {
     // create voucher
     public VoucherResponse createVoucherService(CreateVoucherRequest request) {
         if (voucherRepository.existsByCode(request.getCode().trim())) {
-            throw new RuntimeException("This voucher has already exist");
+            throw new BadRequestException("This voucher has already exist with code " + request.getCode());
         } else {
             modelMapper.getConfiguration().setSkipNullEnabled(true);
             Voucher voucher = modelMapper.map(request, Voucher.class);
@@ -53,7 +51,7 @@ public class VoucherService {
             return modelMapper.map(vouchers, new TypeToken<List<VoucherResponse>>() {
             }.getType());
         }
-        List<Voucher> vouchers = voucherRepository.findByName(name.trim());
+        List<Voucher> vouchers = voucherRepository.findByName(name);
         return modelMapper.map(vouchers, new TypeToken<List<VoucherResponse>>() {
         }.getType());
     }
@@ -62,7 +60,7 @@ public class VoucherService {
     // get by code
     public VoucherResponse getVoucherByCodeService(String code) {
         Voucher voucher = voucherRepository.findByCode(code.trim()).stream().findFirst().orElseThrow(
-                () -> new RuntimeException("Voucher not found with code " + code.trim()));
+                () -> new NotFoundException("Voucher not found with code " + code.trim()));
         return modelMapper.map(voucher, VoucherResponse.class);
     }
 
@@ -70,9 +68,9 @@ public class VoucherService {
     // update
     public VoucherResponse updateVoucherService(UpdateVoucherRequest request) {
         Voucher voucher = voucherRepository.findById(request.getVoucherId().toString()).orElseThrow(
-                () -> new RuntimeException("Voucher not found with id " + request.getVoucherId().toString()));
+                () -> new NotFoundException("Voucher not found with id " + request.getVoucherId().toString()));
         if (request.getCode() != null && voucherRepository.existsByCode(request.getCode().trim())) {
-            throw new RuntimeException("This voucher has already exist");
+            throw new BadRequestException("This voucher has already exist");
         }
         modelMapper.getConfiguration().setSkipNullEnabled(true);
         modelMapper.map(request, voucher);
@@ -84,7 +82,7 @@ public class VoucherService {
     // delete
     public VoucherResponse deleteVoucherService(UUID voucherId) {
         Voucher voucher = voucherRepository.findById(voucherId.toString())
-                .orElseThrow(() -> new RuntimeException("Voucher not found with id " + voucherId.toString()));
+                .orElseThrow(() -> new NotFoundException("Voucher not found with id " + voucherId.toString()));
         voucherRepository.delete(voucher);
         return modelMapper.map(voucher, VoucherResponse.class);
     }
