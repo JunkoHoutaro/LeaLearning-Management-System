@@ -1,9 +1,12 @@
 package com.example.Mini_Project1.config;
 
+import com.example.Mini_Project1.exception.ErrorResponse;
 import com.example.Mini_Project1.service.CustomUserDetailsService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -40,6 +43,34 @@ public class SecurityConfig {
                     .loginPage("/auth/google-login")
                     .defaultSuccessUrl("/auth/google-login-success")
                     .failureUrl("/auth/google-login-failure"))
+        .exceptionHandling(
+            ex ->
+                ex.authenticationEntryPoint(
+                        (request, response, authException) -> {
+                          ErrorResponse errorResponse =
+                              new ErrorResponse(
+                                  HttpStatus.UNAUTHORIZED.value(),
+                                  "Unauthorized",
+                                  "Access Denied: Invalid or missing JWT token");
+                          response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                          response.setContentType("application/json;charset=UTF-8");
+                          ObjectMapper mapper = new ObjectMapper();
+                          mapper.writeValue(response.getWriter(), errorResponse);
+                          response.getWriter().flush();
+                        })
+                    .accessDeniedHandler(
+                        (request, response, accessDeniedException) -> {
+                          ErrorResponse errorResponse =
+                              new ErrorResponse(
+                                  HttpStatus.FORBIDDEN.value(),
+                                  "Access denied",
+                                  "Access Denied: Requested resource is not allowed");
+                          response.setStatus(HttpStatus.FORBIDDEN.value());
+                          response.setContentType("application/json;charset=UTF-8");
+                          ObjectMapper mapper = new ObjectMapper();
+                          mapper.writeValue(response.getWriter(), errorResponse);
+                          response.getWriter().flush();
+                        }))
         .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();

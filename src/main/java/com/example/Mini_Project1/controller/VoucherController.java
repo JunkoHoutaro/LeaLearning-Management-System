@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +28,7 @@ public class VoucherController {
 
     // create voucher
     @PostMapping(value = "insert", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Create a new voucher")
     @ApiResponse(responseCode = "200", description = "Create successfully")
     @ApiResponse(responseCode = "400", description = "Invalid request body", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -61,6 +63,7 @@ public class VoucherController {
 
     //update
     @PatchMapping(value = "update", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update  a voucher")
     @ApiResponse(responseCode = "200", description = "Update successfully")
     @ApiResponse(responseCode = "400", description = "Invalid request body", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -71,6 +74,7 @@ public class VoucherController {
 
     // delete
     @DeleteMapping(value = "delete", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Delete a voucher")
     @ApiResponse(responseCode = "200", description = "Delete successfully")
     @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
