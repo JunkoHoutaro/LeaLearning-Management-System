@@ -2,11 +2,14 @@ package com.example.Mini_Project1.controller;
 
 import com.example.Mini_Project1.request.token.TokenRequest;
 import com.example.Mini_Project1.request.user.CreateUserRequest;
+import com.example.Mini_Project1.request.user.ForgotPasswordRequest;
 import com.example.Mini_Project1.request.user.LoginRequest;
+import com.example.Mini_Project1.request.user.ResetPasswordRequest;
 import com.example.Mini_Project1.response.user.TokenResponse;
 import com.example.Mini_Project1.response.user.UserResponse;
 import com.example.Mini_Project1.service.UserService;
 import com.example.Mini_Project1.utils.JwtTokenUtils;
+import jakarta.validation.Valid;
 import java.net.URI;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,62 +27,74 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private final UserService userService;
-    private final JwtTokenUtils jwtTokenUtils;
+  private final UserService userService;
+  private final JwtTokenUtils jwtTokenUtils;
 
-    @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@RequestBody CreateUserRequest createUserRequest) {
-        return ResponseEntity.ok(userService.createUser(createUserRequest));
+  @PostMapping("/register")
+  public ResponseEntity<UserResponse> register(@RequestBody CreateUserRequest createUserRequest) {
+    return ResponseEntity.ok(userService.createUser(createUserRequest));
+  }
+
+  @PostMapping("/login")
+  public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest loginRequest) {
+    return ResponseEntity.ok(userService.login(loginRequest));
+  }
+
+  @PostMapping("/refresh-token")
+  public ResponseEntity<TokenResponse> refreshToken(@RequestBody TokenRequest tokenRequest) {
+    return ResponseEntity.ok(userService.refreshToken(tokenRequest.getToken()));
+  }
+
+  @PostMapping("/revoke-token")
+  public ResponseEntity<Void> revokeToken(@RequestBody TokenRequest tokenRequest) {
+    userService.revokeToken(tokenRequest.getToken());
+    return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/google-login")
+  public ResponseEntity<Void> googleLogin() {
+    return ResponseEntity.status(HttpStatus.FOUND)
+        .location(URI.create("/oauth2/authorization/google"))
+        .build();
+  }
+
+  @GetMapping("/google-login-success")
+  public ResponseEntity<?> googleLoginSuccess(OAuth2AuthenticationToken authentication) {
+    if (authentication == null || authentication.getPrincipal() == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication failed");
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest loginRequest) {
-        return ResponseEntity.ok(userService.login(loginRequest));
+    OAuth2User oauth2User = authentication.getPrincipal();
+    try {
+      TokenResponse tokenResponse = userService.googleLogin(oauth2User);
+      return ResponseEntity.status(HttpStatus.FOUND)
+          .location(
+              URI.create(
+                  "http://localhost:3000/login?accessToken="
+                      + tokenResponse.getAccessToken()
+                      + "&refreshToken="
+                      + tokenResponse.getRefreshToken()))
+          .build();
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body("Login failed: " + e.getMessage());
     }
+  }
 
-    @PostMapping("/refresh-token")
-    public ResponseEntity<TokenResponse> refreshToken(@RequestBody TokenRequest tokenRequest) {
-        return ResponseEntity.ok(userService.refreshToken(tokenRequest.getToken()));
-    }
+  @GetMapping("/google-login-failure")
+  public ResponseEntity<String> googleLoginFailure() {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Google login failed");
+  }
 
-    @PostMapping("/revoke-token")
-    public ResponseEntity<Void> revokeToken(@RequestBody TokenRequest tokenRequest) {
-        userService.revokeToken(tokenRequest.getToken());
-        return ResponseEntity.noContent().build();
-    }
+  @PostMapping("/forgot-password")
+  public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+    userService.forgotPassword(request.getEmail());
+    return ResponseEntity.ok().build();
+  }
 
-    @GetMapping("/google-login")
-    public ResponseEntity<Void> googleLogin() {
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create("/oauth2/authorization/google"))
-                .build();
-    }
-
-    @GetMapping("/google-login-success")
-    public ResponseEntity<?> googleLoginSuccess(OAuth2AuthenticationToken authentication) {
-        if (authentication == null || authentication.getPrincipal() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Authentication failed");
-        }
-
-        OAuth2User oauth2User = authentication.getPrincipal();
-        try {
-            TokenResponse tokenResponse = userService.googleLogin(oauth2User);
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create("http://localhost:3000/login?accessToken="
-                            + tokenResponse.getAccessToken() + "&refreshToken="
-                            + tokenResponse.getRefreshToken()))
-                    .build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Login failed: " + e.getMessage());
-        }
-    }
-
-    @GetMapping("/google-login-failure")
-    public ResponseEntity<String> googleLoginFailure() {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body("Google login failed");
-    }
-
+  @PostMapping("/reset-password")
+  public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    userService.resetPassword(request.getToken(), request.getNewPassword());
+    return ResponseEntity.ok().build();
+  }
 }

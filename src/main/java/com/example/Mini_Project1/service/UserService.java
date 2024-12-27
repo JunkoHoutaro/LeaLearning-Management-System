@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.Mini_Project1.entity.Token;
 import com.example.Mini_Project1.entity.User;
+import com.example.Mini_Project1.exception.TokenExpiredException;
 import com.example.Mini_Project1.exception.UserNotFoundException;
 import com.example.Mini_Project1.repository.TokenRepository;
 import com.example.Mini_Project1.repository.UserRepository;
@@ -24,9 +25,12 @@ import com.example.Mini_Project1.response.user.UserResponse;
 import com.example.Mini_Project1.utils.JwtTokenUtils;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -34,6 +38,7 @@ public class UserService {
     private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenUtils jwtTokenUtils;
+    private final EmailService emailService;
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
@@ -56,18 +61,29 @@ public class UserService {
 
     @Transactional
     public User findOrCreateUserByEmail(String email, String name) {
-        Optional<User> user = userRepository.findByEmail(email);
-        if (user.isPresent()) {
-            return user.get();
+        try {
+            Optional<User> existingUser = userRepository.findByEmail(email);
+            if (existingUser.isPresent()) {
+                return existingUser.get();
+            }
+
+            // Create new user if not exists
+            User newUser = User.builder()
+                    .name(name)
+                    .email(email)
+                    .password(passwordEncoder.encode("example@123"))
+                    .role("STUDENT")
+                    .createdDate(new Date())
+                    .updatedDate(new Date())
+                    .build();
+
+            return userRepository.save(newUser);
+
+        } catch (Exception e) {
+            // Log the error
+            log.error("Error in findOrCreateUserByEmail: {}", e.getMessage());
+            throw new RuntimeException("Failed to find or create user: " + e.getMessage());
         }
-        User newUser = new User();
-        newUser.setName(name);
-        newUser.setEmail(email);
-        newUser.setPassword(passwordEncoder.encode("example@123"));
-        newUser.setRole("STUDENT");
-        newUser.setCreatedDate(new Date());
-        newUser.setUpdatedDate(new Date());
-        return userRepository.save(newUser);
     }
 
     @Transactional
@@ -152,10 +168,21 @@ public class UserService {
     // Google login method
     @Transactional
     public TokenResponse googleLogin(OAuth2User oauth2User) {
-        String email = oauth2User.getAttribute("email");
-        String name = oauth2User.getAttribute("name");
-        User user = findOrCreateUserByEmail(email, name);
-        return getTokenResponse(user);
+        try {
+            String email = oauth2User.getAttribute("email");
+            String name = oauth2User.getAttribute("name");
+
+            if (email == null) {
+                throw new RuntimeException("Email not provided by Google");
+            }
+
+            User user = findOrCreateUserByEmail(email, name);
+            return getTokenResponse(user);
+
+        } catch (Exception e) {
+            // logger.error("Google login failed: {}", e.getMessage());
+            throw new RuntimeException("Google login failed: " + e.getMessage());
+        }
     }
 
     // Helper method to generate JWT token
@@ -163,24 +190,72 @@ public class UserService {
         String accessToken = jwtTokenUtils.createToken(user);
         String refreshToken = jwtTokenUtils.createRefreshToken(user);
 
-        Optional<Token> existingToken = tokenRepository.findByUserId(user.getId());
-        if (existingToken.isPresent()) {
-            Token token = existingToken.get();
-            token.setToken(refreshToken);
-            token.setExpiredTime(jwtTokenUtils.getExpirationDate(refreshToken));
+        // Remove existing refresh tokens
+        tokenRepository.findByUserIdAndType(user.getId(), "REFRESH")
+                .ifPresent(tokenRepository::delete);
+
+        // Save new refresh token
+        Token token = Token.builder()
+                .user(user)
+                .token(refreshToken)
+                .type("REFRESH")
+                .expiredTime(jwtTokenUtils.getExpirationDate(refreshToken))
+                .isBlackListed(0)
+                .build();
+
+        tokenRepository.save(token);
+
+        return TokenResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    @Transactional
+    public void forgotPassword(String email) {
+        try {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            String resetToken = jwtTokenUtils.createResetPasswordToken(user);
+
+            Token token = Token.builder()
+                    .user(user)
+                    .token(resetToken)
+                    .type("RESET_PASSWORD")
+                    .expiredTime(jwtTokenUtils.getExpirationDate(resetToken))
+                    .isBlackListed(0)
+                    .build();
+
+            tokenRepository.findByUserIdAndType(user.getId(), "RESET_PASSWORD")
+                    .ifPresent(tokenRepository::delete);
+
             tokenRepository.save(token);
-        } else {
-            Token token = new Token();
-            token.setUser(user);
-            token.setToken(refreshToken);
-            token.setType("REFRESH");
-            token.setExpiredTime(jwtTokenUtils.getExpirationDate(refreshToken));
-            tokenRepository.save(token);
+
+            emailService.sendResetPasswordEmail(user.getEmail(), resetToken, user.getName());
+
+        } catch (Exception e) {
+            log.error("Error in forgot password flow: {}", e.getMessage());
+            throw new RuntimeException("Failed to process forgot password request: " + e.getMessage());
+        }
+    }
+
+    @Transactional
+    public void resetPassword(String resetToken, String newPassword) {
+        if (!jwtTokenUtils.validateToken(resetToken)) {
+            throw new TokenExpiredException("Reset token is invalid or expired");
         }
 
-        TokenResponse tokenResponse = new TokenResponse();
-        tokenResponse.setAccessToken(accessToken);
-        tokenResponse.setRefreshToken(refreshToken);
-        return tokenResponse;
+        String userId = jwtTokenUtils.getUserIdFromToken(resetToken);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Revoke the reset token
+        tokenRepository.findByToken(resetToken)
+                .ifPresent(tokenRepository::delete);
     }
+
 }

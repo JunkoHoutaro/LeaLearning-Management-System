@@ -1,12 +1,9 @@
 package com.example.Mini_Project1.config;
 
-import com.example.Mini_Project1.exception.ErrorResponse;
 import com.example.Mini_Project1.service.CustomUserDetailsService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -36,41 +33,31 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http.csrf(csrf -> csrf.disable())
-        .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+        .authorizeHttpRequests(
+            auth ->
+                auth.requestMatchers(
+                        "/auth/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/swagger-resources/**",
+                        "/webjars/**")
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated())
         .oauth2Login(
             oauth2 ->
                 oauth2
                     .loginPage("/auth/google-login")
-                    .defaultSuccessUrl("/auth/google-login-success")
+                    .defaultSuccessUrl("/auth/google-login-success", true)
                     .failureUrl("/auth/google-login-failure"))
         .exceptionHandling(
-            ex ->
-                ex.authenticationEntryPoint(
-                        (request, response, authException) -> {
-                          ErrorResponse errorResponse =
-                              new ErrorResponse(
-                                  HttpStatus.UNAUTHORIZED.value(),
-                                  "Unauthorized",
-                                  "Access Denied: Invalid or missing JWT token");
-                          response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                          response.setContentType("application/json;charset=UTF-8");
-                          ObjectMapper mapper = new ObjectMapper();
-                          mapper.writeValue(response.getWriter(), errorResponse);
-                          response.getWriter().flush();
-                        })
+            exceptionHandling ->
+                exceptionHandling
+                    .authenticationEntryPoint(
+                        (request, response, authException) -> response.setStatus(401))
                     .accessDeniedHandler(
-                        (request, response, accessDeniedException) -> {
-                          ErrorResponse errorResponse =
-                              new ErrorResponse(
-                                  HttpStatus.FORBIDDEN.value(),
-                                  "Access denied",
-                                  "Access Denied: Requested resource is not allowed");
-                          response.setStatus(HttpStatus.FORBIDDEN.value());
-                          response.setContentType("application/json;charset=UTF-8");
-                          ObjectMapper mapper = new ObjectMapper();
-                          mapper.writeValue(response.getWriter(), errorResponse);
-                          response.getWriter().flush();
-                        }))
+                        (request, response, accessDeniedException) -> response.setStatus(403)))
         .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
