@@ -3,6 +3,8 @@ package com.example.Mini_Project1.service;
 import com.example.Mini_Project1.entity.Chapter;
 import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.Quizz;
+import com.example.Mini_Project1.exception.BadRequestException;
+import com.example.Mini_Project1.exception.NotFoundException;
 import com.example.Mini_Project1.repository.ChapterRepository;
 import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.repository.QuizzRepository;
@@ -10,10 +12,7 @@ import com.example.Mini_Project1.request.QuizzAndQuestion.*;
 import com.example.Mini_Project1.response.QuizzAndQuestion.QuizzResponse;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.modelmapper.TypeToken;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -29,21 +28,17 @@ public class QuizzService {
     private final QuizzRepository quizzRepository;
     private final CourseRepository courseRepository;
     private final ChapterRepository chapterRepository;
+    private final ModelMapper modelMapper;
 
     @Transactional
     // create quizz by course id
     public QuizzResponse createQuizzByCourseService(CreateQuizzByCourseRequest request) {
         Course course = courseRepository.findById(request.getCourseId().toString()).orElseThrow(
-                () -> new RuntimeException("Course not found with id " + request.getCourseId().toString()));
-        List<Quizz> quizzByCourse = quizzRepository.findByCourse(course);
+                () -> new NotFoundException("Course not found with id " + request.getCourseId().toString()));
 
-        boolean isNameDuplicate = quizzByCourse.stream()
-                .anyMatch(quizz -> quizz.getName().equals(request.getName()));
+        if(quizzRepository.existsByCourse(course))
+            throw new BadRequestException("Quizz already exists in this course.");
 
-        if (isNameDuplicate)
-            throw new RuntimeException("Quizz already exists in this course.");
-
-        ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration().setSkipNullEnabled(true);
 
         Quizz quizz = modelMapper.map(request, Quizz.class);
@@ -57,7 +52,7 @@ public class QuizzService {
     // create quizz by chapter id
     public QuizzResponse createQuizzByChapterService(CreateQuizzByChapterRequest request) {
         Chapter chapter = chapterRepository.findById(request.getChapterId().toString()).orElseThrow(
-                () -> new RuntimeException("Chapter not find with id " + request.getChapterId().toString()));
+                () -> new NotFoundException("Chapter not find with id " + request.getChapterId().toString()));
         List<Quizz> quizzByChapter = quizzRepository.findByChapter(chapter);
         Course couseByChapter = chapter.getCourse();
 
@@ -65,9 +60,8 @@ public class QuizzService {
                 .anyMatch(quizz -> quizz.getName().equals(request.getName()));
 
         if (isNameDuplicate)
-            throw new RuntimeException("Quizz already exists in this chapter.");
+            throw new BadRequestException("Quizz already exists in this chapter.");
 
-        ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration().setSkipNullEnabled(true);
 
         Quizz quizz = modelMapper.map(request, Quizz.class);
@@ -82,10 +76,10 @@ public class QuizzService {
     // search by course
     public List<QuizzResponse> getQuizzByCourseService(UUID courseId) {
         Course course = courseRepository.findById(courseId.toString())
-                .orElseThrow(() -> new RuntimeException("Course not found with id " + courseId.toString()));
+                .orElseThrow(() -> new NotFoundException("Course not found with id " + courseId.toString()));
         List<Quizz> quizzes = quizzRepository.findByCourse(course);
 
-        return new ModelMapper().map(quizzes, new TypeToken<List<QuizzResponse>>() {
+        return modelMapper.map(quizzes, new TypeToken<List<QuizzResponse>>() {
         }.getType());
     }
 
@@ -93,10 +87,10 @@ public class QuizzService {
     // search by chapter
     public List<QuizzResponse> getQuizzByChapterService(UUID chapterId) {
         Chapter chapter = chapterRepository.findById(chapterId.toString())
-                .orElseThrow(() -> new RuntimeException("Chapter not found with id " + chapterId.toString()));
+                .orElseThrow(() -> new NotFoundException("Chapter not found with id " + chapterId.toString()));
         List<Quizz> quizzes = quizzRepository.findByChapter(chapter);
 
-        return new ModelMapper().map(quizzes, new TypeToken<List<QuizzResponse>>() {
+        return modelMapper.map(quizzes, new TypeToken<List<QuizzResponse>>() {
         }.getType());
     }
 
@@ -104,11 +98,22 @@ public class QuizzService {
     // update quizz
     public QuizzResponse updateQuizzService(UpdateQuizzRequest request) {
         Quizz quizz = quizzRepository.findById(request.getQuizzId().toString())
-                .orElseThrow(() -> new RuntimeException("Course not found with id " + request.getQuizzId().toString()));
+                .orElseThrow(() -> new NotFoundException("Quizz not found with id " + request.getQuizzId().toString()));
+
+        List<Quizz> quizzByCourse = quizzRepository.findByCourse(quizz.getCourse());
+        List<Quizz> quizzByChapter = quizzRepository.findByChapter(quizz.getChapter());
+
+        boolean isNameDuplicateByCourse = quizzByCourse.stream()
+                .anyMatch(quizz1 -> quizz1.getName().equals(request.getName()));
+
+        boolean isNameDuplicateByChapter = quizzByChapter.stream()
+                .anyMatch(quizz2 -> quizz2.getName().equals(request.getName()));
+
+        if ((isNameDuplicateByChapter==true) || (isNameDuplicateByCourse==true))
+            throw new BadRequestException("Quizz already exists.");
 
         quizz.setUpdatedDate(new Date());
 
-        ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration().setSkipNullEnabled(true);
         modelMapper.map(request, quizz);
 
@@ -116,11 +121,12 @@ public class QuizzService {
     }
 
     @Transactional
+    // delete
     public QuizzResponse deleteQuizzService(UUID quizzId) {
         Quizz quizz = quizzRepository.findById(quizzId.toString()).orElseThrow(
-                () -> new RuntimeException("Quizz not found with id " + quizzId.toString()));
+                () -> new NotFoundException("Quizz not found with id " + quizzId.toString()));
 
         quizzRepository.delete(quizz);
-        return new ModelMapper().map(quizz, QuizzResponse.class);
+        return modelMapper.map(quizz, QuizzResponse.class);
     }
 }

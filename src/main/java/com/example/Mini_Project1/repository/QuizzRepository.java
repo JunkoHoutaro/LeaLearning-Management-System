@@ -12,4 +12,5 @@ public interface QuizzRepository extends JpaRepository<Quizz, String> {
     List<Quizz> findByName(String name);
     List<Quizz> findByChapter(Chapter chapter);
     List<Quizz> findByCourse(Course course);
+    boolean existsByCourse(Course course);
 }

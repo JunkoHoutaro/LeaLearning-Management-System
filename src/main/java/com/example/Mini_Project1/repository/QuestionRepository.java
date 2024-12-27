@@ -1,7 +1,5 @@
 package com.example.Mini_Project1.repository;
 
-import com.example.Mini_Project1.entity.Chapter;
-import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.Question;
 import com.example.Mini_Project1.entity.Quizz;
 import org.springframework.data.jpa.repository.JpaRepository;
