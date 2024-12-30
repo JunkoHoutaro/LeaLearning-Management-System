@@ -28,7 +28,8 @@ public class LessonService {
     private final ChapterRepository chapterRepository;
     private final FileService fileService;
 
-    public LessonService(LessonRepository lessonRepository, ChapterRepository chapterRepository, FileService fileService) {
+    public LessonService(LessonRepository lessonRepository, ChapterRepository chapterRepository,
+            FileService fileService) {
         this.lessonRepository = lessonRepository;
         this.chapterRepository = chapterRepository;
         this.fileService = fileService;
@@ -37,9 +38,9 @@ public class LessonService {
     @Transactional
     public LessonResponse createLesson(CreateLessonRequest request) {
         Chapter chapter = chapterRepository.findById(request.getChapterId().toString()).orElseThrow(
-                () -> new RuntimeException("Chapter not found with ID: " + request.getChapterId().toString()));
+                () -> new NotFoundException("Chapter not found with ID: " + request.getChapterId().toString()));
 
-        if(lessonRepository.existsByChapterIdAndIndex(request.getChapterId().toString(), request.getIndex()))
+        if (lessonRepository.existsByChapterIdAndIndex(request.getChapterId().toString(), request.getIndex()))
             throw new BadRequestException("This chapter already has lesson with index " + request.getIndex());
 
         ModelMapper modelMapper = new ModelMapper();
@@ -57,7 +58,7 @@ public class LessonService {
     public List<LessonResponse> getLessonsByChapter(UUID chapterId) {
 
         Chapter chapter = chapterRepository.findById(chapterId.toString()).orElseThrow(
-                () -> new RuntimeException("Chapter not found with ID: " + chapterId.toString()));
+                () -> new NotFoundException("Chapter not found with ID: " + chapterId.toString()));
 
         List<Lesson> lessons = lessonRepository.findByChapter(chapter);
         ModelMapper modelMapper = new ModelMapper();
@@ -69,13 +70,13 @@ public class LessonService {
     public LessonResponse updateLesson(UpdateLessonRequest request) {
 
         Lesson lesson = lessonRepository.findById(request.getLessonId().toString()).orElseThrow(
-                () -> new RuntimeException("Lesson not found with ID: " + request.getLessonId().toString()));
+                () -> new NotFoundException("Lesson not found with ID: " + request.getLessonId().toString()));
 
-        if(request.getName() != null && request.getName().isBlank())
+        if (request.getName() != null && request.getName().isBlank())
             throw new BadRequestException("Lesson's name cannot be empty");
 
         Hibernate.initialize(lesson.getChapter());
-        if(lessonRepository.existsByChapterIdAndIndex(lesson.getChapter().getId(), request.getIndex()))
+        if (lessonRepository.existsByChapterIdAndIndex(lesson.getChapter().getId(), request.getIndex()))
             throw new BadRequestException("This chapter already has lesson with index " + request.getIndex());
 
         lesson.setUpdatedDate(new Date());
@@ -90,32 +91,24 @@ public class LessonService {
 
     @Transactional
     public LessonResponse deleteLesson(UUID lessonId) {
-        // Kiểm tra nếu Lesson có tồn tại không
         Lesson lesson = lessonRepository.findById(lessonId.toString())
-                .orElseThrow(() -> new RuntimeException("Lesson not found with ID: " + lessonId.toString()));
-
-        // Map Lesson entity to LessonResponse before deleting
+                .orElseThrow(() -> new NotFoundException("Lesson not found with ID: " + lessonId.toString()));
         LessonResponse lessonResponse = new ModelMapper().map(lesson, LessonResponse.class);
-
-        // Xóa lesson
         lessonRepository.delete(lesson);
-
-        // Trả về LessonResponse sau khi xóa
         return lessonResponse;
     }
 
     public FileResponse uploadLessonVideo(UUID lessonId, MultipartFile file) throws Exception {
         String contentType = file.getContentType();
 
-        if(contentType == null|| !contentType.startsWith("video/")) {
+        if (contentType == null || !contentType.startsWith("video/")) {
             throw new BadRequestException("This file is not a video file.");
         }
 
         Lesson lesson = lessonRepository.findById(lessonId.toString()).orElseThrow(
-                ()-> new NotFoundException("Can't find lesson with id: " + lessonId)
-        );
+                () -> new NotFoundException("Can't find lesson with id: " + lessonId));
 
-        if(lesson.getVideo_url() != null){
+        if (lesson.getVideo_url() != null) {
             fileService.removeResource(lesson.getVideo_url());
         }
 
@@ -128,10 +121,9 @@ public class LessonService {
 
     public FileResponse uploadLessonResource(UUID lessonId, MultipartFile file) throws Exception {
         Lesson lesson = lessonRepository.findById(lessonId.toString()).orElseThrow(
-                ()-> new NotFoundException("Can't find lesson with id: " + lessonId)
-        );
+                () -> new NotFoundException("Can't find lesson with id: " + lessonId));
 
-        if(lesson.getResource_url() != null){
+        if (lesson.getResource_url() != null) {
             fileService.removeResource(lesson.getResource_url());
         }
 

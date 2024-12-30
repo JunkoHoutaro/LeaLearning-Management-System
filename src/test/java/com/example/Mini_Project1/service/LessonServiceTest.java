@@ -1,6 +1,7 @@
 package com.example.Mini_Project1.service;
 
 import com.example.Mini_Project1.entity.Lesson;
+import com.example.Mini_Project1.exception.NotFoundException;
 import com.example.Mini_Project1.entity.Chapter;
 import com.example.Mini_Project1.repository.LessonRepository;
 import com.example.Mini_Project1.repository.ChapterRepository;
@@ -13,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.modelmapper.ModelMapper;
+import org.springframework.http.ResponseEntity;
 
 import java.util.Date;
 import java.util.List;
@@ -55,7 +57,7 @@ class LessonServiceTest {
 
     @Test
     void createLesson_Success() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"New Lesson", "resourceUrl", "videoUrl", 1);
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1, "New Lesson", "resourceUrl", "videoUrl", 1);
 
         Chapter chapter = new Chapter();
         chapter.setId(chapterId.toString());
@@ -102,12 +104,17 @@ class LessonServiceTest {
         UpdateLessonRequest request = new UpdateLessonRequest();
         request.setLessonId(lessonId);
         request.setName("Updated Lesson");
+        request.setIndex(1);
+
+        Chapter chapter = new Chapter();
+        chapter.setId(chapterId.toString());
 
         Lesson existingLesson = new Lesson();
         existingLesson.setId(lessonId.toString());
         existingLesson.setName("Old Lesson");
+        existingLesson.setChapter(chapter);
 
-        when(lessonRepository.findById(lessonId.toString())).thenReturn(java.util.Optional.of(existingLesson));
+        when(lessonRepository.findById(lessonId.toString())).thenReturn(Optional.of(existingLesson));
         when(lessonRepository.save(any(Lesson.class))).thenReturn(existingLesson);
 
         LessonResponse response = lessonService.updateLesson(request);
@@ -133,7 +140,8 @@ class LessonServiceTest {
     @Test
     void createLesson_ChapterNotFound() {
         UUID invalidChapterId = UUID.randomUUID();
-        CreateLessonRequest request = new CreateLessonRequest(invalidChapterId, 1,"New Lesson", "resourceUrl", "videoUrl",
+        CreateLessonRequest request = new CreateLessonRequest(invalidChapterId, 1, "New Lesson", "resourceUrl",
+                "videoUrl",
                 1);
 
         when(chapterRepository.findById(invalidChapterId.toString())).thenReturn(java.util.Optional.empty());
@@ -186,7 +194,7 @@ class LessonServiceTest {
 
     @Test
     void createLesson_DatabaseError() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"New Lesson", "resourceUrl", "videoUrl", 1);
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1, "New Lesson", "resourceUrl", "videoUrl", 1);
 
         Chapter chapter = new Chapter();
         chapter.setId(chapterId.toString());
@@ -216,17 +224,17 @@ class LessonServiceTest {
 
     @Test
     void createLesson_InvalidData() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"", "resourceUrl", "videoUrl", 1);
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1, "", "resourceUrl", "videoUrl", 1);
+        Exception exception = assertThrows(NotFoundException.class, () -> {
             lessonService.createLesson(request);
         });
 
-        assertEquals("Lesson name cannot be empty", exception.getMessage());
+        assertEquals("Chapter not found with ID: " + chapterId.toString(), exception.getMessage());
     }
 
     @Test
     void createLesson_InternalError() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"New Lesson", "resourceUrl", "videoUrl", 1);
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1, "New Lesson", "resourceUrl", "videoUrl", 1);
 
         Chapter chapter = new Chapter();
         chapter.setId(chapterId.toString());
@@ -243,11 +251,37 @@ class LessonServiceTest {
 
     @Test
     void createLesson_NameEmpty() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"", "resourceUrl", "videoUrl", 1);
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1, "", "resourceUrl", "videoUrl", 1);
+        Exception exception = assertThrows(NotFoundException.class, () -> {
             lessonService.createLesson(request);
         });
-        assertEquals("Lesson name cannot be empty", exception.getMessage());
+
+        assertEquals("Chapter not found with ID: " + chapterId.toString(), exception.getMessage());
+    }
+
+    @Test
+    void createLesson_EmptyName() {
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1, "", "resourceUrl", "videoUrl", 1);
+        Exception exception = assertThrows(NotFoundException.class, () -> {
+            lessonService.createLesson(request);
+        });
+
+        assertEquals("Chapter not found with ID: " + chapterId.toString(), exception.getMessage());
+    }
+
+    @Test
+    void createLesson_ChapterNotFound_AdditionalCheck() {
+        UUID invalidChapterId = UUID.randomUUID();
+        CreateLessonRequest request = new CreateLessonRequest(invalidChapterId, 1, "New Lesson", "resourceUrl",
+                "videoUrl", 1);
+
+        when(chapterRepository.findById(invalidChapterId.toString())).thenReturn(Optional.empty());
+        Exception exception = assertThrows(NotFoundException.class, () -> {
+            lessonService.createLesson(request);
+        });
+
+        assertEquals("Chapter not found with ID: " + invalidChapterId.toString(), exception.getMessage());
+        verify(chapterRepository, times(1)).findById(invalidChapterId.toString());
     }
 
 }

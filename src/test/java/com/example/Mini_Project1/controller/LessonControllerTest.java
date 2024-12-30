@@ -42,12 +42,9 @@ class LessonControllerTest {
 
     @Test
     void createLesson_Success() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1,"New Lesson", "resourceUrl", "videoUrl", 1);
-
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1, "New Lesson", "resourceUrl", "videoUrl", 1);
         when(lessonService.createLesson(request)).thenReturn(mockLessonResponse);
-
         ResponseEntity<LessonResponse> response = lessonController.createNewLesson(request);
-
         assertEquals(200, response.getStatusCode().value());
         assertEquals(mockLessonResponse, response.getBody());
         verify(lessonService, times(1)).createLesson(request);
@@ -56,9 +53,7 @@ class LessonControllerTest {
     @Test
     void getLessons_Success() {
         when(lessonService.getLessonsByChapter(chapterId)).thenReturn(List.of(mockLessonResponse));
-
         ResponseEntity<List<LessonResponse>> response = lessonController.getLessonsByChapter(chapterId);
-
         assertEquals(200, response.getStatusCode().value());
         assertEquals(List.of(mockLessonResponse), response.getBody());
         verify(lessonService, times(1)).getLessonsByChapter(chapterId);
@@ -69,11 +64,8 @@ class LessonControllerTest {
         UpdateLessonRequest request = new UpdateLessonRequest();
         request.setLessonId(lessonId);
         request.setName("Updated Lesson");
-
         when(lessonService.updateLesson(request)).thenReturn(mockLessonResponse);
-
         ResponseEntity<LessonResponse> response = lessonController.updateLesson(request);
-
         assertEquals(200, response.getStatusCode().value());
         assertEquals(mockLessonResponse, response.getBody());
         verify(lessonService, times(1)).updateLesson(request);
@@ -82,9 +74,7 @@ class LessonControllerTest {
     @Test
     void deleteLesson_Success() {
         when(lessonService.deleteLesson(lessonId)).thenReturn(mockLessonResponse);
-
         ResponseEntity<LessonResponse> response = lessonController.deleteLesson(lessonId);
-
         assertEquals(200, response.getStatusCode().value());
         assertEquals(mockLessonResponse, response.getBody());
         verify(lessonService, times(1)).deleteLesson(lessonId);
@@ -92,11 +82,8 @@ class LessonControllerTest {
 
     @Test
     void createLesson_InvalidData() {
-        CreateLessonRequest request = new CreateLessonRequest(null,1, "", "resourceUrl", "videoUrl", 1); // Dữ liệu không
-                                                                                                       // hợp lệ
-
+        CreateLessonRequest request = new CreateLessonRequest(null, 1, "", "resourceUrl", "videoUrl", 1);
         when(lessonService.createLesson(request)).thenThrow(new IllegalArgumentException("Invalid data"));
-
         try {
             lessonController.createNewLesson(request);
         } catch (Exception e) {
@@ -106,10 +93,9 @@ class LessonControllerTest {
 
     @Test
     void getLessons_NoLessonsFound() {
-        when(lessonService.getLessonsByChapter(chapterId)).thenReturn(List.of()); // Không có bài học
+        when(lessonService.getLessonsByChapter(chapterId)).thenReturn(List.of());
 
         ResponseEntity<List<LessonResponse>> response = lessonController.getLessonsByChapter(chapterId);
-
         assertEquals(200, response.getStatusCode().value());
         assertTrue(response.getBody().isEmpty());
         verify(lessonService, times(1)).getLessonsByChapter(chapterId);
@@ -126,6 +112,7 @@ class LessonControllerTest {
         ResponseEntity<LessonResponse> response = lessonController.updateLesson(request);
 
         assertEquals(404, response.getStatusCode().value());
+        assertNull(response.getBody());
     }
 
     @Test
@@ -135,29 +122,26 @@ class LessonControllerTest {
         ResponseEntity<LessonResponse> response = lessonController.deleteLesson(lessonId);
 
         assertEquals(404, response.getStatusCode().value());
-        verify(lessonService, times(1)).deleteLesson(lessonId);
+        assertNull(response.getBody());
     }
 
     @Test
     void getLessons_NoLessonsReturned() {
         when(lessonService.getLessonsByChapter(chapterId)).thenReturn(null);
-
         ResponseEntity<List<LessonResponse>> response = lessonController.getLessonsByChapter(chapterId);
-
         assertEquals(200, response.getStatusCode().value());
         assertNull(response.getBody());
     }
 
     @Test
     void createLesson_ChapterNotFound() {
-        CreateLessonRequest request = new CreateLessonRequest(UUID.randomUUID(), 1,"New Lesson", "resourceUrl",
+        CreateLessonRequest request = new CreateLessonRequest(UUID.randomUUID(), 1, "New Lesson", "resourceUrl",
                 "videoUrl", 1);
 
         when(lessonService.createLesson(request)).thenThrow(new RuntimeException("Chapter not found"));
-
         ResponseEntity<LessonResponse> response = lessonController.createNewLesson(request);
-
         assertEquals(404, response.getStatusCode().value());
+        assertNull(response.getBody());
     }
 
 }

@@ -32,13 +32,9 @@ public class ChapterController {
     @GetMapping
     @Operation(summary = "Get chapters by course ID")
     @ApiResponse(responseCode = "200", description = "Get successfully")
+    @ApiResponse(responseCode = "404", description = "Course not found")
     public ResponseEntity<List<ChapterResponse>> getChaptersByCourse(
             @Parameter(description = "Course ID to get related chapters") @RequestParam UUID courseId) {
-
-        // Chuyển đổi courseId từ String thành UUID nếu cần
-        // UUID courseUUID = UUID.fromString(courseId);
-
-        // Gọi service với courseId đã chuyển đổi
         return ResponseEntity.ok(chapterService.getChaptersByCourse(courseId));
     }
 
@@ -46,6 +42,7 @@ public class ChapterController {
     @Operation(summary = "Update chapter information")
     @ApiResponse(responseCode = "200", description = "Update successfully")
     @ApiResponse(responseCode = "400", description = "Invalid request body")
+    @ApiResponse(responseCode = "404", description = "Chapter not found")
     public ResponseEntity<ChapterResponse> updateChapter(@Valid @RequestBody UpdateChapterRequest request) {
         return ResponseEntity.ok(chapterService.updateChapter(request));
     }
@@ -53,6 +50,7 @@ public class ChapterController {
     @DeleteMapping
     @Operation(summary = "Delete a chapter")
     @ApiResponse(responseCode = "200", description = "Delete successfully")
+    @ApiResponse(responseCode = "404", description = "Chapter not found")
     public ResponseEntity<ChapterResponse> deleteChapter(@RequestParam UUID chapterId) {
         return ResponseEntity.ok(chapterService.deleteChapter(chapterId));
     }

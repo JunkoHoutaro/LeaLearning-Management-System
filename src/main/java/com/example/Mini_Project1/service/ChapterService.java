@@ -4,6 +4,8 @@ import com.example.Mini_Project1.entity.Chapter;
 import com.example.Mini_Project1.entity.Course;
 import com.example.Mini_Project1.entity.Lesson;
 import com.example.Mini_Project1.exception.BadRequestException;
+import com.example.Mini_Project1.exception.ChapterNotFoundException;
+import com.example.Mini_Project1.exception.CourseNotFoundException;
 import com.example.Mini_Project1.repository.ChapterRepository;
 import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.repository.LessonRepository;
@@ -38,14 +40,15 @@ public class ChapterService {
     public ChapterResponse createChapter(CreateChapterRequest request) {
         Course course = courseRepository.findById(request.getCourseId().toString())
                 .orElseThrow(
-                        () -> new RuntimeException("Course not found with ID: " + request.getCourseId().toString()));
+                        () -> new CourseNotFoundException(
+                                "Course not found with ID: " + request.getCourseId().toString()));
 
-        if(chapterRepository.existsByCourseIdAndIndex(request.getCourseId().toString(), request.getIndex()))
+        if (chapterRepository.existsByCourseIdAndIndex(request.getCourseId().toString(), request.getIndex()))
             throw new BadRequestException("This course already has chapter with index " + request.getIndex());
 
         Chapter chapter = modelMapper.map(request, Chapter.class);
 
-        chapter.setCourse(course); // Liên kết với Course
+        chapter.setCourse(course);
         chapter.setCreatedDate(new Date());
         chapter.setUpdatedDate(new Date());
 
@@ -56,7 +59,7 @@ public class ChapterService {
     public List<ChapterResponse> getChaptersByCourse(UUID courseId) {
 
         Course course = courseRepository.findById(courseId.toString())
-                .orElseThrow(() -> new RuntimeException("Course not found with ID: " + courseId.toString()));
+                .orElseThrow(() -> new CourseNotFoundException("Course not found with ID: " + courseId.toString()));
         List<Chapter> chapters = chapterRepository.findByCourse(course);
         return modelMapper.map(chapters, new TypeToken<List<ChapterResponse>>() {
         }.getType());
@@ -67,13 +70,14 @@ public class ChapterService {
 
         Chapter chapter = chapterRepository.findById(request.getChapterId().toString())
                 .orElseThrow(
-                        () -> new RuntimeException("Chapter not found with ID: " + request.getChapterId().toString()));
+                        () -> new ChapterNotFoundException(
+                                "Chapter not found with ID: " + request.getChapterId().toString()));
 
-        if(request.getName() != null && request.getName().isBlank())
+        if (request.getName() != null && request.getName().isBlank())
             throw new BadRequestException("Name cannot be empty");
 
         Hibernate.initialize(chapter.getCourse());
-        if(chapterRepository.existsByCourseIdAndIndex(chapter.getCourse().getId(), request.getIndex()))
+        if (chapterRepository.existsByCourseIdAndIndex(chapter.getCourse().getId(), request.getIndex()))
             throw new BadRequestException("This course already has chapter with index " + request.getIndex());
 
         modelMapper.map(request, chapter);
@@ -86,26 +90,23 @@ public class ChapterService {
 
     @Transactional
     public ChapterResponse deleteChapter(UUID chapterId) {
-        // Kiểm tra nếu Chapter có tồn tại không
         Chapter chapter = chapterRepository.findById(chapterId.toString())
-                .orElseThrow(() -> new RuntimeException("Chapter not found with ID: " + chapterId.toString()));
-
-        // Map Chapter entity to ChapterResponse before deleting
+                .orElseThrow(() -> new ChapterNotFoundException("Chapter not found with ID: " + chapterId.toString()));
         ChapterResponse chapterResponse = modelMapper.map(chapter, ChapterResponse.class);
-
-        // Xóa chapter
         chapterRepository.delete(chapter);
-
-        // Trả về ChapterResponse sau khi xóa
         return chapterResponse;
     }
 
     public List<ChapterDetailsResponse> getChapterDetails(String courseId, Boolean isPaid) {
         List<Chapter> chapters = chapterRepository.getChapterByCourseId(courseId);
-        List<ChapterDetailsResponse> chapterResponses = modelMapper.map(chapters, new TypeToken<List<ChapterDetailsResponse>>() {}.getType());
+        List<ChapterDetailsResponse> chapterResponses = modelMapper.map(chapters,
+                new TypeToken<List<ChapterDetailsResponse>>() {
+                }.getType());
         for (ChapterDetailsResponse chapterResponse : chapterResponses) {
-            List<Lesson> lessons = isPaid? lessonRepository.findByChapterId(chapterResponse.getChapter().getId()) : lessonRepository.findByChapterIdAndIsDemo(chapterResponse.getChapter().getId(), 1);
-            List<LessonResponse> lessonResponses = modelMapper.map(lessons, new TypeToken<List<LessonResponse>>(){}.getType());
+            List<Lesson> lessons = isPaid ? lessonRepository.findByChapterId(chapterResponse.getChapter().getId())
+                    : lessonRepository.findByChapterIdAndIsDemo(chapterResponse.getChapter().getId(), 1);
+            List<LessonResponse> lessonResponses = modelMapper.map(lessons, new TypeToken<List<LessonResponse>>() {
+            }.getType());
             chapterResponse.setLessons(lessonResponses);
         }
 

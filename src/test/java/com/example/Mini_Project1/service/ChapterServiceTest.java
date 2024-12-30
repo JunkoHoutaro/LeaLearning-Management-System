@@ -2,11 +2,16 @@ package com.example.Mini_Project1.service;
 
 import com.example.Mini_Project1.entity.Chapter;
 import com.example.Mini_Project1.entity.Course;
+import com.example.Mini_Project1.exception.BadRequestException;
+import com.example.Mini_Project1.exception.ChapterNotFoundException;
+import com.example.Mini_Project1.exception.CourseNotFoundException;
 import com.example.Mini_Project1.repository.ChapterRepository;
 import com.example.Mini_Project1.repository.CourseRepository;
 import com.example.Mini_Project1.request.chapter.CreateChapterRequest;
 import com.example.Mini_Project1.request.chapter.UpdateChapterRequest;
 import com.example.Mini_Project1.response.chapter.ChapterResponse;
+import com.jayway.jsonpath.spi.mapper.MappingException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -20,8 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -72,7 +76,7 @@ class ChapterServiceTest {
 
     @Test
     void createChapter_Success() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"New Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1, "New Chapter");
 
         when(courseRepository.findById(courseId.toString())).thenReturn(Optional.of(mockCourse));
         when(modelMapper.map(request, Chapter.class)).thenReturn(mockChapter);
@@ -106,6 +110,7 @@ class ChapterServiceTest {
         UpdateChapterRequest request = new UpdateChapterRequest();
         request.setChapterId(chapterId);
         request.setName("Updated Chapter");
+        request.setIndex(1);
 
         when(chapterRepository.findById(chapterId.toString())).thenReturn(Optional.of(mockChapter));
         doAnswer(invocation -> {
@@ -138,7 +143,7 @@ class ChapterServiceTest {
     void deleteChapter_NotFound() {
         when(chapterRepository.findById(chapterId.toString())).thenReturn(Optional.empty());
 
-        RuntimeException exception = assertThrows(RuntimeException.class,
+        ChapterNotFoundException exception = assertThrows(ChapterNotFoundException.class,
                 () -> chapterService.deleteChapter(chapterId));
 
         assertEquals("Chapter not found with ID: " + chapterId, exception.getMessage());
@@ -146,11 +151,11 @@ class ChapterServiceTest {
 
     @Test
     void createChapter_CourseNotFound() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"New Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1, "NewChapter");
 
         when(courseRepository.findById(courseId.toString())).thenReturn(Optional.empty());
 
-        RuntimeException exception = assertThrows(RuntimeException.class,
+        CourseNotFoundException exception = assertThrows(CourseNotFoundException.class,
                 () -> chapterService.createChapter(request));
 
         assertEquals("Course not found with ID: " + courseId, exception.getMessage());
@@ -160,7 +165,7 @@ class ChapterServiceTest {
     void getChaptersByCourse_CourseNotFound() {
         when(courseRepository.findById(courseId.toString())).thenReturn(Optional.empty());
 
-        RuntimeException exception = assertThrows(RuntimeException.class,
+        CourseNotFoundException exception = assertThrows(CourseNotFoundException.class,
                 () -> chapterService.getChaptersByCourse(courseId));
 
         assertEquals("Course not found with ID: " + courseId, exception.getMessage());
@@ -174,33 +179,17 @@ class ChapterServiceTest {
 
         when(chapterRepository.findById(chapterId.toString())).thenReturn(Optional.empty());
 
-        RuntimeException exception = assertThrows(RuntimeException.class,
+        ChapterNotFoundException exception = assertThrows(ChapterNotFoundException.class,
                 () -> chapterService.updateChapter(request));
 
         assertEquals("Chapter not found with ID: " + chapterId, exception.getMessage());
     }
 
     @Test
-    void updateChapter_ModelMapperFailure() {
-        UpdateChapterRequest request = new UpdateChapterRequest();
-        request.setChapterId(chapterId);
-        request.setName("Updated Chapter");
-
-        when(chapterRepository.findById(chapterId.toString())).thenReturn(Optional.of(mockChapter));
-        doThrow(new RuntimeException("ModelMapper mapping error")).when(modelMapper)
-                .map(any(UpdateChapterRequest.class), eq(mockChapter));
-
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> chapterService.updateChapter(request));
-
-        assertEquals("ModelMapper mapping error", exception.getMessage());
-    }
-
-    @Test
     void deleteChapter_ChapterNotFound() {
         when(chapterRepository.findById(chapterId.toString())).thenReturn(Optional.empty());
 
-        RuntimeException exception = assertThrows(RuntimeException.class,
+        ChapterNotFoundException exception = assertThrows(ChapterNotFoundException.class,
                 () -> chapterService.deleteChapter(chapterId));
 
         assertEquals("Chapter not found with ID: " + chapterId, exception.getMessage());
@@ -208,7 +197,7 @@ class ChapterServiceTest {
 
     @Test
     void createChapter_SaveFailure() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, 1,"New Chapter");
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1, "New Chapter");
 
         when(courseRepository.findById(courseId.toString())).thenReturn(Optional.of(mockCourse));
         when(modelMapper.map(request, Chapter.class)).thenReturn(mockChapter);
@@ -218,6 +207,84 @@ class ChapterServiceTest {
                 () -> chapterService.createChapter(request));
 
         assertEquals("Save failed", exception.getMessage());
+    }
+
+    @Test
+    void createChapter_InvalidIndex() {
+        CreateChapterRequest request = new CreateChapterRequest(courseId, -1, "New Chapter");
+
+        when(courseRepository.findById(courseId.toString())).thenReturn(Optional.of(mockCourse));
+
+        // Mock chapter creation and saving
+        Chapter mockChapter = new Chapter();
+        mockChapter.setCourse(mockCourse); // Ensure chapter is not null
+
+        when(modelMapper.map(request, Chapter.class)).thenReturn(mockChapter);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> chapterService.createChapter(request));
+
+        assertEquals("Chapter index must be greater than 0.", exception.getMessage());
+    }
+
+    @Test
+    void createChapter_IndexConflict() {
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1, "New Chapter");
+
+        when(courseRepository.findById(courseId.toString())).thenReturn(Optional.of(mockCourse));
+        when(chapterRepository.existsByCourseIdAndIndex(courseId.toString(), 1)).thenReturn(true);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> chapterService.createChapter(request));
+
+        assertEquals("This course already has chapter with index 1", exception.getMessage());
+    }
+
+    @Test
+    void updateChapter_NameCannotBeEmpty() {
+        UpdateChapterRequest request = new UpdateChapterRequest();
+        request.setChapterId(chapterId);
+        request.setName("");
+
+        when(chapterRepository.findById(chapterId.toString())).thenReturn(Optional.of(mockChapter));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> chapterService.updateChapter(request));
+        assertEquals("Name cannot be empty", exception.getMessage());
+    }
+
+    @Test
+    void deleteChapter_ChapterDoesNotExist() {
+        when(chapterRepository.findById(chapterId.toString())).thenReturn(Optional.empty());
+
+        ChapterNotFoundException exception = assertThrows(ChapterNotFoundException.class,
+                () -> chapterService.deleteChapter(chapterId));
+
+        assertEquals("Chapter not found with ID: " + chapterId, exception.getMessage());
+    }
+
+    @Test
+    void updateChapter_NoChange() {
+        UpdateChapterRequest request = new UpdateChapterRequest();
+        request.setChapterId(chapterId);
+        request.setName("Test Chapter");
+        request.setIndex(1);
+
+        when(chapterRepository.findById(chapterId.toString())).thenReturn(Optional.of(mockChapter));
+        doAnswer(invocation -> {
+            UpdateChapterRequest source = invocation.getArgument(0);
+            Chapter destination = invocation.getArgument(1);
+            destination.setName(source.getName());
+            return null;
+        }).when(modelMapper).map(any(UpdateChapterRequest.class), eq(mockChapter));
+
+        when(chapterRepository.save(mockChapter)).thenReturn(mockChapter);
+        when(modelMapper.map(mockChapter, ChapterResponse.class)).thenReturn(mockChapterResponse);
+
+        ChapterResponse response = chapterService.updateChapter(request);
+
+        assertEquals(mockChapterResponse, response);
+        verify(chapterRepository, times(1)).save(mockChapter);
     }
 
 }
