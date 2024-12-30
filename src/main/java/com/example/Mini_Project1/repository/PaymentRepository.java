@@ -56,4 +56,6 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
     boolean existsByUserIdAndCourseId(String userId, String courseId);
 
     Payment findByUserIdAndCourseId(String userId, String courseId);
+
+    boolean existsByUserIdAndCourseIdAndStatus(String userId, String courseId, int status);
 }
