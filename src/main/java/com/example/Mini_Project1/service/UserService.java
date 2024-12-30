@@ -13,10 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.Mini_Project1.entity.Token;
 import com.example.Mini_Project1.entity.User;
+import com.example.Mini_Project1.exception.BadRequestException;
 import com.example.Mini_Project1.exception.TokenExpiredException;
 import com.example.Mini_Project1.exception.UserNotFoundException;
 import com.example.Mini_Project1.repository.TokenRepository;
 import com.example.Mini_Project1.repository.UserRepository;
+import com.example.Mini_Project1.request.RegisterRequest;
 import com.example.Mini_Project1.request.user.CreateUserRequest;
 import com.example.Mini_Project1.request.user.LoginRequest;
 import com.example.Mini_Project1.request.user.UpdateUserRequest;
@@ -25,7 +27,6 @@ import com.example.Mini_Project1.response.user.UserResponse;
 import com.example.Mini_Project1.utils.JwtTokenUtils;
 
 import lombok.AllArgsConstructor;
-import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -51,11 +52,33 @@ public class UserService {
     }
 
     @Transactional
+    public UserResponse register(RegisterRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new BadRequestException("Email is already registered");
+        }
+
+        User user = new User();
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole("STUDENT");
+        user.setCreatedDate(new Date());
+        user.setUpdatedDate(new Date());
+
+        return modelMapper.map(userRepository.save(user), UserResponse.class);
+    }
+
+    @Transactional
     public UserResponse createUser(CreateUserRequest createUserRequest) {
+        if (userRepository.findByEmail(createUserRequest.getEmail()).isPresent()) {
+            throw new BadRequestException("Email is already registered");
+        }
+
         User user = modelMapper.map(createUserRequest, User.class);
         user.setPassword(passwordEncoder.encode(createUserRequest.getPassword()));
         user.setCreatedDate(new Date());
         user.setUpdatedDate(new Date());
+
         return modelMapper.map(userRepository.save(user), UserResponse.class);
     }
 

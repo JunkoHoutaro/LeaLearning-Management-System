@@ -1,17 +1,7 @@
 package com.example.Mini_Project1.controller;
 
-import com.example.Mini_Project1.request.token.TokenRequest;
-import com.example.Mini_Project1.request.user.CreateUserRequest;
-import com.example.Mini_Project1.request.user.ForgotPasswordRequest;
-import com.example.Mini_Project1.request.user.LoginRequest;
-import com.example.Mini_Project1.request.user.ResetPasswordRequest;
-import com.example.Mini_Project1.response.user.TokenResponse;
-import com.example.Mini_Project1.response.user.UserResponse;
-import com.example.Mini_Project1.service.UserService;
-import com.example.Mini_Project1.utils.JwtTokenUtils;
-import jakarta.validation.Valid;
 import java.net.URI;
-import lombok.AllArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -22,79 +12,102 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.Mini_Project1.exception.ErrorResponse;
+import com.example.Mini_Project1.request.RegisterRequest;
+import com.example.Mini_Project1.request.token.TokenRequest;
+import com.example.Mini_Project1.request.user.CreateUserRequest;
+import com.example.Mini_Project1.request.user.ForgotPasswordRequest;
+import com.example.Mini_Project1.request.user.LoginRequest;
+import com.example.Mini_Project1.request.user.ResetPasswordRequest;
+import com.example.Mini_Project1.response.user.TokenResponse;
+import com.example.Mini_Project1.response.user.UserResponse;
+import com.example.Mini_Project1.service.UserService;
+import com.example.Mini_Project1.utils.JwtTokenUtils;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
+
 @RestController
 @AllArgsConstructor
 @RequestMapping("/auth")
 public class AuthController {
 
-  private final UserService userService;
-  private final JwtTokenUtils jwtTokenUtils;
+    private final UserService userService;
+    private final JwtTokenUtils jwtTokenUtils;
 
-  @PostMapping("/register")
-  public ResponseEntity<UserResponse> register(@RequestBody CreateUserRequest createUserRequest) {
-    return ResponseEntity.ok(userService.createUser(createUserRequest));
-  }
-
-  @PostMapping("/login")
-  public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest loginRequest) {
-    return ResponseEntity.ok(userService.login(loginRequest));
-  }
-
-  @PostMapping("/refresh-token")
-  public ResponseEntity<TokenResponse> refreshToken(@RequestBody TokenRequest tokenRequest) {
-    return ResponseEntity.ok(userService.refreshToken(tokenRequest.getToken()));
-  }
-
-  @PostMapping("/revoke-token")
-  public ResponseEntity<Void> revokeToken(@RequestBody TokenRequest tokenRequest) {
-    userService.revokeToken(tokenRequest.getToken());
-    return ResponseEntity.noContent().build();
-  }
-
-  @GetMapping("/google-login")
-  public ResponseEntity<Void> googleLogin() {
-    return ResponseEntity.status(HttpStatus.FOUND)
-        .location(URI.create("/oauth2/authorization/google"))
-        .build();
-  }
-
-  @GetMapping("/google-login-success")
-  public ResponseEntity<?> googleLoginSuccess(OAuth2AuthenticationToken authentication) {
-    if (authentication == null || authentication.getPrincipal() == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication failed");
+    @PostMapping("/register")
+    @Operation(summary = "Register new student account")
+    @ApiResponse(responseCode = "200", description = "Register successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid request body",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(userService.register(request));
     }
 
-    OAuth2User oauth2User = authentication.getPrincipal();
-    try {
-      TokenResponse tokenResponse = userService.googleLogin(oauth2User);
-      return ResponseEntity.status(HttpStatus.FOUND)
-          .location(
-              URI.create(
-                  "http://localhost:3000/login?accessToken="
-                      + tokenResponse.getAccessToken()
-                      + "&refreshToken="
-                      + tokenResponse.getRefreshToken()))
-          .build();
-    } catch (Exception e) {
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body("Login failed: " + e.getMessage());
+    @PostMapping("/login")
+    public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest loginRequest) {
+        return ResponseEntity.ok(userService.login(loginRequest));
     }
-  }
 
-  @GetMapping("/google-login-failure")
-  public ResponseEntity<String> googleLoginFailure() {
-    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Google login failed");
-  }
+    @PostMapping("/refresh-token")
+    public ResponseEntity<TokenResponse> refreshToken(@RequestBody TokenRequest tokenRequest) {
+        return ResponseEntity.ok(userService.refreshToken(tokenRequest.getToken()));
+    }
 
-  @PostMapping("/forgot-password")
-  public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-    userService.forgotPassword(request.getEmail());
-    return ResponseEntity.ok().build();
-  }
+    @PostMapping("/revoke-token")
+    public ResponseEntity<Void> revokeToken(@RequestBody TokenRequest tokenRequest) {
+        userService.revokeToken(tokenRequest.getToken());
+        return ResponseEntity.noContent().build();
+    }
 
-  @PostMapping("/reset-password")
-  public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-    userService.resetPassword(request.getToken(), request.getNewPassword());
-    return ResponseEntity.ok().build();
-  }
+    @GetMapping("/google-login")
+    public ResponseEntity<Void> googleLogin() {
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create("/oauth2/authorization/google"))
+                .build();
+    }
+
+    @GetMapping("/google-login-success")
+    public ResponseEntity<?> googleLoginSuccess(OAuth2AuthenticationToken authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication failed");
+        }
+
+        OAuth2User oauth2User = authentication.getPrincipal();
+        try {
+            TokenResponse tokenResponse = userService.googleLogin(oauth2User);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(
+                            URI.create(
+                                    "http://localhost:3000/login?accessToken="
+                                    + tokenResponse.getAccessToken()
+                                    + "&refreshToken="
+                                    + tokenResponse.getRefreshToken()))
+                    .build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Login failed: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/google-login-failure")
+    public ResponseEntity<String> googleLoginFailure() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Google login failed");
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        userService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok().build();
+    }
 }
