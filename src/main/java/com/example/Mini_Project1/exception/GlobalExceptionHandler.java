@@ -2,6 +2,7 @@ package com.example.Mini_Project1.exception;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -46,8 +47,8 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse
                 = new ErrorResponse(
                         HttpStatus.FORBIDDEN.value(),
-                        "Access denied",
-                        "Access Denied: Insufficient privileges - ADMIN role required");
+                        "Authorization denied",
+                        "Authorization Denied: " + ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
     }
 

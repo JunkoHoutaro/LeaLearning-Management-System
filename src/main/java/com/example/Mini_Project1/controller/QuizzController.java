@@ -1,76 +1,97 @@
 package com.example.Mini_Project1.controller;
 
-import com.example.Mini_Project1.request.QuizzAndQuestion.*;
-import com.example.Mini_Project1.response.QuizzAndQuestion.QuizzResponse;
-import com.example.Mini_Project1.service.QuizzService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.models.annotations.OpenAPI30;
-import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.Mini_Project1.exception.ErrorResponse;
+import com.example.Mini_Project1.request.QuizzAndQuestion.CreateQuizzByChapterRequest;
+import com.example.Mini_Project1.request.QuizzAndQuestion.CreateQuizzByCourseRequest;
+import com.example.Mini_Project1.request.QuizzAndQuestion.UpdateQuizzRequest;
+import com.example.Mini_Project1.response.QuizzAndQuestion.QuizzResponse;
+import com.example.Mini_Project1.service.QuizzService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
 
 @RestController
 @RequestMapping("/quizzes")
 @AllArgsConstructor
 public class QuizzController {
 
-    private QuizzService quizzService;
+    private final QuizzService quizzService;
 
-    // creat quizz by course id
-    @PostMapping("insert-by-course")
+    @PostMapping(value = "insert-by-course", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     @Operation(summary = "Create a new quizz by course id")
     @ApiResponse(responseCode = "200", description = "Create successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid request body")
-    public ResponseEntity<QuizzResponse> createQuizzByCourse(@Valid @RequestBody CreateQuizzByCourseRequest request){
-        return ResponseEntity.ok(quizzService.createQuizzByCourseService(request));
+    @ApiResponse(responseCode = "400", description = "Invalid request body", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<QuizzResponse> createQuizzByCourse(@Valid @RequestBody CreateQuizzByCourseRequest request, @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(quizzService.createQuizzByCourseService(request, userDetails));
     }
 
-    // creat quizz by chapter id
-    @PostMapping("insert-by-chapter")
+    @PostMapping(value = "insert-by-chapter", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     @Operation(summary = "Create a new quizz by chapter id")
     @ApiResponse(responseCode = "200", description = "Create successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid request body")
-    public ResponseEntity<QuizzResponse> createQuizzByChapter(@Valid @RequestBody CreateQuizzByChapterRequest request){
-        return ResponseEntity.ok(quizzService.createQuizzByChapterService(request));
+    @ApiResponse(responseCode = "400", description = "Invalid request body", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<QuizzResponse> createQuizzByChapter(@Valid @RequestBody CreateQuizzByChapterRequest request, @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(quizzService.createQuizzByChapterService(request, userDetails));
     }
 
-    // get quizzes by course
-    @GetMapping("search-by-course")
-    @Operation(summary = "Search all quizzes by course")
-    @ApiResponse(responseCode = "200", description = "Get successfully")
-    public ResponseEntity<List<QuizzResponse>> getQuizzByCourse(@RequestParam UUID courseId){
-        return ResponseEntity.ok(quizzService.getQuizzByCourseService(courseId));
-    }
-
-    // get quizzes by chapter
-    @GetMapping("search-by-chapter")
-    @Operation(summary = "Search all quizzes by chapter")
-    @ApiResponse(responseCode = "200", description = "Get successfully")
-    public ResponseEntity<List<QuizzResponse>> getQuizzByChapter(@RequestParam UUID chapterId){
-        return ResponseEntity.ok(quizzService.getQuizzByChapterService(chapterId));
-    }
-
-    // update quizz
-    @PatchMapping("update")
+    @PatchMapping(value = "update", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     @Operation(summary = "Update a quizz")
     @ApiResponse(responseCode = "200", description = "Update successfully")
     @ApiResponse(responseCode = "400", description = "Invalid request body")
-    public ResponseEntity<QuizzResponse> updateQuizz(@Valid @RequestBody UpdateQuizzRequest request){
-        return ResponseEntity.ok(quizzService.updateQuizzService(request));
+    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<QuizzResponse> updateQuizz(@Valid @RequestBody UpdateQuizzRequest request, @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(quizzService.updateQuizzService(request, userDetails));
     }
 
-    // delete
-    @DeleteMapping("delete")
+    @DeleteMapping(value = "delete", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     @Operation(summary = "Delete a quizz")
     @ApiResponse(responseCode = "200", description = "Delete successfully")
-    public ResponseEntity<QuizzResponse> deleteQuizz(@RequestParam UUID quizzId) {
-        return ResponseEntity.ok(quizzService.deleteQuizzService(quizzId));
+    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<QuizzResponse> deleteQuizz(@RequestParam UUID quizzId, @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(quizzService.deleteQuizzService(quizzId, userDetails));
     }
+
+    @GetMapping(value = "by-course/{courseId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get quizzes by course id")
+    @ApiResponse(responseCode = "200", description = "Get successfully")
+    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<List<QuizzResponse>> getQuizzByCourse(@PathVariable UUID courseId) {
+        return ResponseEntity.ok(quizzService.getQuizzByCourseService(courseId));
+    }
+
+    @GetMapping(value = "by-chapter/{chapterId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get quizzes by chapter id")
+    @ApiResponse(responseCode = "200", description = "Get successfully")
+    @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<List<QuizzResponse>> getQuizzByChapter(@PathVariable UUID chapterId) {
+        return ResponseEntity.ok(quizzService.getQuizzByChapterService(chapterId));
+    }
+
 }
