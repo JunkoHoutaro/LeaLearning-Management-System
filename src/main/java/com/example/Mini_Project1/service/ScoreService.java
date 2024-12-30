@@ -1,108 +1,171 @@
 package com.example.Mini_Project1.service;
 
-import com.example.Mini_Project1.entity.*;
-import com.example.Mini_Project1.exception.BadRequestException;
-import com.example.Mini_Project1.exception.NotFoundException;
-import com.example.Mini_Project1.repository.*;
-import com.example.Mini_Project1.request.score.CreateScoreRequest;
-import com.example.Mini_Project1.response.score.ScoreResponse;
-import lombok.AllArgsConstructor;
-import org.hibernate.Hibernate;
-import org.modelmapper.ModelMapper;
-import org.modelmapper.TypeToken;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeToken;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+
+import com.example.Mini_Project1.entity.Course;
+import com.example.Mini_Project1.entity.Question;
+import com.example.Mini_Project1.entity.Quizz;
+import com.example.Mini_Project1.entity.Score;
+import com.example.Mini_Project1.entity.User;
+import com.example.Mini_Project1.exception.BadRequestException;
+import com.example.Mini_Project1.exception.NotFoundException;
+import com.example.Mini_Project1.repository.PaymentRepository;
+import com.example.Mini_Project1.repository.QuestionRepository;
+import com.example.Mini_Project1.repository.QuizzRepository;
+import com.example.Mini_Project1.repository.ScoreRepository;
+import com.example.Mini_Project1.repository.UserRepository;
+import com.example.Mini_Project1.request.score.CreateScoreRequest;
+import com.example.Mini_Project1.response.score.ScoreResponse;
+
+import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+
 @Service
 @AllArgsConstructor
 public class ScoreService {
+
     private final ScoreRepository scoreRepository;
     private final QuizzRepository quizzRepository;
     private final QuestionRepository questionRepository;
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
     private final PaymentRepository paymentRepository;
-    private final CourseRepository courseRepository;
 
-    public List<ScoreResponse> getScores(UUID userId, UUID courseId, boolean isAscending) {
-        User user = userId != null ? userRepository.findById(userId.toString())
-                .orElseThrow(() -> new NotFoundException("Can't find user with id " + userId)) : null;
+    public boolean hasStudentTakenQuiz(UUID quizzId, UUID userId) {
+        Quizz quizz = quizzRepository.findById(quizzId.toString())
+                .orElseThrow(() -> new NotFoundException("Quiz not found"));
+        User user = userRepository.findById(userId.toString())
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
-        if(courseId != null && !courseRepository.existsById(courseId.toString()))
-            throw new NotFoundException("Can't find course with id " + courseId);
+        return scoreRepository.findOne(
+                (root, query, cb) -> cb.and(
+                        cb.equal(root.get("quizz"), quizz),
+                        cb.equal(root.get("user"), user)
+                )
+        ).isPresent();
+    }
 
-        List<Quizz> quizzes = courseId != null ? quizzRepository.findByCourseId(courseId.toString()) : null;
+    private boolean hasUserPurchasedCourse(String userId, String courseId) {
+        return paymentRepository.existsByUserIdAndCourseId(userId, courseId);
+    }
 
-        Specification<Score> specification = Specification.where(null);
+    private Map<UUID, Character> validateAnswers(Map<String, Character> rawAnswers) {
+        Map<UUID, Character> validatedAnswers = new HashMap<>();
+        for (Map.Entry<String, Character> entry : rawAnswers.entrySet()) {
+            try {
+                UUID questionId = UUID.fromString(entry.getKey());
+                validatedAnswers.put(questionId, entry.getValue());
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Invalid question ID format: " + entry.getKey());
+            }
+        }
+        return validatedAnswers;
+    }
 
-        if (user != null) {
-            specification = specification.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.equal(root.get("user"), user)
-            );
+    @Transactional
+    public ScoreResponse createScore(CreateScoreRequest request, UserDetails userDetails) {
+        // Get user
+        User user = userRepository.findById(userDetails.getUsername())
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        // Get quiz
+        Quizz quizz = quizzRepository.findById(request.getQuizzId().toString())
+                .orElseThrow(() -> new NotFoundException("Quiz not found"));
+
+        // Check if student has already taken this quiz
+        if (hasStudentTakenQuiz(request.getQuizzId(), UUID.fromString(userDetails.getUsername()))) {
+            throw new BadRequestException("You have already taken this quiz");
         }
 
-        if (quizzes != null && !quizzes.isEmpty()) {
-            specification = specification.and((root, query, criteriaBuilder) ->
-                    root.get("quizz").in(quizzes)
-            );
+        // Get associated course
+        Course course = quizz.getCourse() != null
+                ? quizz.getCourse()
+                : quizz.getChapter().getCourse();
+
+        // Check if user has purchased the course
+        if (!hasUserPurchasedCourse(userDetails.getUsername(), course.getId())) {
+            throw new BadRequestException("You must purchase this course before taking its quizzes");
         }
 
-        Sort sort = isAscending ? Sort.by("score").ascending() : Sort.by("score").descending();
+        // Validate and convert answers
+        Map<UUID, Character> validatedAnswers = validateAnswers(request.getAnswers());
 
-        List<Score> scores = scoreRepository.findAll(specification, sort);
+        // Calculate score
+        int score = calculateScore(validatedAnswers, quizz);
+
+        // Create and save score entity
+        Score scoreEntity = Score.builder()
+                .user(user)
+                .quizz(quizz)
+                .score(score)
+                .createdDate(new Date())
+                .build();
+
+        return modelMapper.map(scoreRepository.save(scoreEntity), ScoreResponse.class);
+    }
+
+    private int calculateScore(Map<UUID, Character> answers, Quizz quizz) {
+        List<Question> questions = questionRepository.findByQuizz(quizz);
+
+        if (questions.isEmpty()) {
+            throw new BadRequestException("No questions found for this quiz");
+        }
+
+        int totalQuestions = questions.size();
+        int correctAnswers = 0;
+
+        for (Question question : questions) {
+            UUID questionId = UUID.fromString(question.getId());
+            Character studentAnswer = answers.get(questionId);
+
+            if (studentAnswer != null
+                    && Character.toLowerCase(studentAnswer) == Character.toLowerCase(question.getCorrect())) {
+                correctAnswers++;
+            }
+        }
+
+        return (int) Math.round((double) correctAnswers / totalQuestions * 100);
+    }
+
+    @Transactional
+    public List<ScoreResponse> getAllScores(UUID quizzId) {
+        Quizz quizz = quizzRepository.findById(quizzId.toString())
+                .orElseThrow(() -> new NotFoundException("Quiz not found"));
+
+        List<Score> scores = scoreRepository.findAll(
+                (root, query, cb) -> cb.equal(root.get("quizz"), quizz),
+                Sort.by(Sort.Direction.DESC, "createdDate")
+        );
 
         return modelMapper.map(scores, new TypeToken<List<ScoreResponse>>() {
         }.getType());
     }
 
-    public ScoreResponse createScore(CreateScoreRequest request) {
-        User user = userRepository.findById(request.getUserId().toString()).orElseThrow(
-                () -> new NotFoundException("Can't find user with id " + request.getUserId())
-        );
+    @Transactional
+    public ScoreResponse getStudentScore(UUID quizzId, UUID userId) {
+        Quizz quizz = quizzRepository.findById(quizzId.toString())
+                .orElseThrow(() -> new NotFoundException("Quiz not found"));
 
-        Quizz quiz = quizzRepository.findById(request.getQuizId().toString()).orElseThrow(
-                ()-> new NotFoundException("Can't find quiz with id " + request.getQuizId())
-        );
+        User user = userRepository.findById(userId.toString())
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
-        // Catch error if user hasn't purchased a course yet
-        Hibernate.initialize(quiz.getCourse());
-        if(!paymentRepository.existsByUserIdAndCourseIdAndStatus(user.getId(), quiz.getCourse().getId(), 3))
-            throw new BadRequestException("This user hasn't purchased this course.");
+        Score score = scoreRepository.findOne(
+                (root, query, cb) -> cb.and(
+                        cb.equal(root.get("quizz"), quizz),
+                        cb.equal(root.get("user"), user)
+                )
+        ).orElseThrow(() -> new NotFoundException("Score not found"));
 
-        int totalScore = 0;
-
-        for(Map.Entry<UUID,Character> entry: request.getAnswers().entrySet()){
-            UUID questionId = entry.getKey();
-            Character answer = entry.getValue();
-
-            Question question = questionRepository.findById(questionId.toString()).orElseThrow(
-                    () -> new NotFoundException("Can't find question with id " + questionId)
-            );
-
-            // Check if the question belongs to this quiz
-            if(question.getQuizz() != quiz)
-                throw new BadRequestException("The question with id "+ question.getId() +" doesn't belong to the quiz");
-
-            if(answer != null && answer.equals(question.getCorrect()))
-                totalScore++;
-        }
-
-        Score score = Score.builder()
-                .user(user)
-                .quizz(quiz)
-                .score(totalScore)
-                .createdDate(new Date())
-                .updatedDate(new Date())
-                .build();
-
-        Score savedScore = scoreRepository.save(score);
-
-        return modelMapper.map(savedScore, ScoreResponse.class);
+        return modelMapper.map(score, ScoreResponse.class);
     }
 }
