@@ -1,25 +1,30 @@
 package com.example.Mini_Project1.service;
 
-import com.example.Mini_Project1.entity.Chapter;
-import com.example.Mini_Project1.entity.Course;
-import com.example.Mini_Project1.entity.Quizz;
-import com.example.Mini_Project1.exception.BadRequestException;
-import com.example.Mini_Project1.exception.NotFoundException;
-import com.example.Mini_Project1.repository.ChapterRepository;
-import com.example.Mini_Project1.repository.CourseRepository;
-import com.example.Mini_Project1.repository.QuizzRepository;
-import com.example.Mini_Project1.request.QuizzAndQuestion.*;
-import com.example.Mini_Project1.response.QuizzAndQuestion.QuizzResponse;
-import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
-import org.modelmapper.TypeToken;
-import org.springframework.stereotype.Service;
-
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+
+import com.example.Mini_Project1.entity.Chapter;
+import com.example.Mini_Project1.entity.Course;
+import com.example.Mini_Project1.entity.Quizz;
+import com.example.Mini_Project1.exception.AccessDeniedException;
+import com.example.Mini_Project1.exception.BadRequestException;
+import com.example.Mini_Project1.exception.NotFoundException;
+import com.example.Mini_Project1.repository.ChapterRepository;
+import com.example.Mini_Project1.repository.CourseRepository;
+import com.example.Mini_Project1.repository.QuizzRepository;
+import com.example.Mini_Project1.request.QuizzAndQuestion.CreateQuizzByChapterRequest;
+import com.example.Mini_Project1.request.QuizzAndQuestion.CreateQuizzByCourseRequest;
+import com.example.Mini_Project1.request.QuizzAndQuestion.UpdateQuizzRequest;
+import com.example.Mini_Project1.response.QuizzAndQuestion.QuizzResponse;
+import com.nimbusds.jose.shaded.gson.reflect.TypeToken;
+
+import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
 
 @Service
 @AllArgsConstructor
@@ -31,17 +36,22 @@ public class QuizzService {
     private final ModelMapper modelMapper;
 
     @Transactional
-    // create quizz by course id
-    public QuizzResponse createQuizzByCourseService(CreateQuizzByCourseRequest request) {
+    public QuizzResponse createQuizzByCourseService(CreateQuizzByCourseRequest request, UserDetails userDetails) {
         Course course = courseRepository.findById(request.getCourseId().toString()).orElseThrow(
                 () -> new NotFoundException("Course not found with id " + request.getCourseId().toString()));
 
-        if(quizzRepository.existsByCourse(course))
-            throw new BadRequestException("Quizz already exists in this course.");
+        if (!course.getUser().getId().equals(userDetails.getUsername())) {
+            throw new AccessDeniedException("You do not have permission to create a quiz for this course.");
+        }
+
+        if (quizzRepository.existsByCourse(course)) {
+            throw new BadRequestException("Quizz already exists for this course.");
+        }
 
         modelMapper.getConfiguration().setSkipNullEnabled(true);
 
         Quizz quizz = modelMapper.map(request, Quizz.class);
+        quizz.setCourse(course);
         quizz.setCreatedDate(new Date());
         quizz.setUpdatedDate(new Date());
 
@@ -49,23 +59,23 @@ public class QuizzService {
     }
 
     @Transactional
-    // create quizz by chapter id
-    public QuizzResponse createQuizzByChapterService(CreateQuizzByChapterRequest request) {
+    public QuizzResponse createQuizzByChapterService(CreateQuizzByChapterRequest request, UserDetails userDetails) {
         Chapter chapter = chapterRepository.findById(request.getChapterId().toString()).orElseThrow(
-                () -> new NotFoundException("Chapter not find with id " + request.getChapterId().toString()));
-        List<Quizz> quizzByChapter = quizzRepository.findByChapter(chapter);
-        Course couseByChapter = chapter.getCourse();
+                () -> new NotFoundException("Chapter not found with id " + request.getChapterId().toString()));
+        Course course = chapter.getCourse();
 
-        boolean isNameDuplicate = quizzByChapter.stream()
-                .anyMatch(quizz -> quizz.getName().equals(request.getName()));
+        if (!course.getUser().getId().equals(userDetails.getUsername())) {
+            throw new AccessDeniedException("You do not have permission to create a quiz for this chapter.");
+        }
 
-        if (isNameDuplicate)
-            throw new BadRequestException("Quizz already exists in this chapter.");
+        if (quizzRepository.existsByChapter(chapter)) {
+            throw new BadRequestException("Quizz already exists for this chapter.");
+        }
 
         modelMapper.getConfiguration().setSkipNullEnabled(true);
 
         Quizz quizz = modelMapper.map(request, Quizz.class);
-        quizz.setCourse(couseByChapter);
+        quizz.setChapter(chapter);
         quizz.setCreatedDate(new Date());
         quizz.setUpdatedDate(new Date());
 
@@ -73,7 +83,34 @@ public class QuizzService {
     }
 
     @Transactional
-    // search by course
+    public QuizzResponse updateQuizzService(UpdateQuizzRequest request, UserDetails userDetails) {
+        Quizz quizz = quizzRepository.findById(request.getQuizzId().toString())
+                .orElseThrow(() -> new NotFoundException("Quizz not found with id " + request.getQuizzId().toString()));
+
+        if (!quizz.getCourse().getUser().getId().equals(userDetails.getUsername())) {
+            throw new AccessDeniedException("You do not have permission to update this quiz.");
+        }
+
+        modelMapper.map(request, quizz);
+        quizz.setUpdatedDate(new Date());
+
+        return modelMapper.map(quizzRepository.save(quizz), QuizzResponse.class);
+    }
+
+    @Transactional
+    public QuizzResponse deleteQuizzService(UUID quizzId, UserDetails userDetails) {
+        Quizz quizz = quizzRepository.findById(quizzId.toString()).orElseThrow(
+                () -> new NotFoundException("Quizz not found with id " + quizzId.toString()));
+
+        if (!quizz.getCourse().getUser().getId().equals(userDetails.getUsername())) {
+            throw new AccessDeniedException("You do not have permission to delete this quiz.");
+        }
+
+        quizzRepository.delete(quizz);
+        return modelMapper.map(quizz, QuizzResponse.class);
+    }
+
+    @Transactional
     public List<QuizzResponse> getQuizzByCourseService(UUID courseId) {
         Course course = courseRepository.findById(courseId.toString())
                 .orElseThrow(() -> new NotFoundException("Course not found with id " + courseId.toString()));
@@ -84,7 +121,6 @@ public class QuizzService {
     }
 
     @Transactional
-    // search by chapter
     public List<QuizzResponse> getQuizzByChapterService(UUID chapterId) {
         Chapter chapter = chapterRepository.findById(chapterId.toString())
                 .orElseThrow(() -> new NotFoundException("Chapter not found with id " + chapterId.toString()));
@@ -94,39 +130,4 @@ public class QuizzService {
         }.getType());
     }
 
-    @Transactional
-    // update quizz
-    public QuizzResponse updateQuizzService(UpdateQuizzRequest request) {
-        Quizz quizz = quizzRepository.findById(request.getQuizzId().toString())
-                .orElseThrow(() -> new NotFoundException("Quizz not found with id " + request.getQuizzId().toString()));
-
-        List<Quizz> quizzByCourse = quizzRepository.findByCourse(quizz.getCourse());
-        List<Quizz> quizzByChapter = quizzRepository.findByChapter(quizz.getChapter());
-
-        boolean isNameDuplicateByCourse = quizzByCourse.stream()
-                .anyMatch(quizz1 -> quizz1.getName().equals(request.getName()));
-
-        boolean isNameDuplicateByChapter = quizzByChapter.stream()
-                .anyMatch(quizz2 -> quizz2.getName().equals(request.getName()));
-
-        if ((isNameDuplicateByChapter==true) || (isNameDuplicateByCourse==true))
-            throw new BadRequestException("Quizz already exists.");
-
-        quizz.setUpdatedDate(new Date());
-
-        modelMapper.getConfiguration().setSkipNullEnabled(true);
-        modelMapper.map(request, quizz);
-
-        return modelMapper.map(quizzRepository.save(quizz), QuizzResponse.class);
-    }
-
-    @Transactional
-    // delete
-    public QuizzResponse deleteQuizzService(UUID quizzId) {
-        Quizz quizz = quizzRepository.findById(quizzId.toString()).orElseThrow(
-                () -> new NotFoundException("Quizz not found with id " + quizzId.toString()));
-
-        quizzRepository.delete(quizz);
-        return modelMapper.map(quizz, QuizzResponse.class);
-    }
 }
