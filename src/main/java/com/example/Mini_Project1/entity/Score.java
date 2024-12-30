@@ -24,6 +24,7 @@ public class Score {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private String id;
+  private Integer score;
 
   private Date createdDate;
   private Date updatedDate;
