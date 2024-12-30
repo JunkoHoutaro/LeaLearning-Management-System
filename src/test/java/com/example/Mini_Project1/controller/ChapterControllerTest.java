@@ -1,24 +1,28 @@
 package com.example.Mini_Project1.controller;
 
-import com.example.Mini_Project1.request.chapter.CreateChapterRequest;
-import com.example.Mini_Project1.request.chapter.UpdateChapterRequest;
-import com.example.Mini_Project1.response.chapter.ChapterResponse;
-import com.example.Mini_Project1.service.ChapterService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.ResponseEntity;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import com.example.Mini_Project1.request.chapter.CreateChapterRequest;
+import com.example.Mini_Project1.request.chapter.UpdateChapterRequest;
+import com.example.Mini_Project1.response.chapter.ChapterResponse;
+import com.example.Mini_Project1.service.ChapterService;
 
 class ChapterControllerTest {
 
@@ -27,6 +31,9 @@ class ChapterControllerTest {
 
     @InjectMocks
     private ChapterController chapterController;
+
+    @Mock
+    private UserDetails userDetails;
 
     private UUID courseId;
     private UUID chapterId;
@@ -48,13 +55,15 @@ class ChapterControllerTest {
     }
 
     @Test
-    void createChapter_Success() {
+    void createNewChapter_Success() {
         CreateChapterRequest request = new CreateChapterRequest(courseId, 1, "New Chapter");
-        when(chapterService.createChapter(request)).thenReturn(mockChapterResponse);
-        ResponseEntity<ChapterResponse> response = chapterController.createNewChapter(request);
-        assertEquals(200, response.getStatusCode().value());
-        assertEquals(mockChapterResponse, response.getBody());
-        verify(chapterService, times(1)).createChapter(request);
+        ChapterResponse response = new ChapterResponse();
+        when(chapterService.createChapter(request, userDetails)).thenReturn(response);
+
+        ResponseEntity<ChapterResponse> result = chapterController.createNewChapter(request, userDetails);
+
+        assertEquals(response, result.getBody());
+        verify(chapterService, times(1)).createChapter(request, userDetails);
     }
 
     @Test
@@ -71,33 +80,52 @@ class ChapterControllerTest {
     @Test
     void updateChapter_Success() {
         UpdateChapterRequest request = new UpdateChapterRequest();
-        request.setChapterId(chapterId);
+        request.setChapterId(UUID.randomUUID());
         request.setName("Updated Chapter");
-        when(chapterService.updateChapter(request)).thenReturn(mockChapterResponse);
-        ResponseEntity<ChapterResponse> response = chapterController.updateChapter(request);
-        assertEquals(200, response.getStatusCode().value());
-        assertEquals(mockChapterResponse, response.getBody());
-        verify(chapterService, times(1)).updateChapter(request);
+        ChapterResponse response = new ChapterResponse();
+        when(chapterService.updateChapter(request, userDetails)).thenReturn(response);
+
+        ResponseEntity<ChapterResponse> result = chapterController.updateChapter(request, userDetails);
+
+        assertEquals(response, result.getBody());
+        verify(chapterService, times(1)).updateChapter(request, userDetails);
     }
 
     @Test
     void deleteChapter_Success() {
-        when(chapterService.deleteChapter(chapterId)).thenReturn(mockChapterResponse);
-        ResponseEntity<ChapterResponse> response = chapterController.deleteChapter(chapterId);
-        assertEquals(200, response.getStatusCode().value());
-        assertEquals(mockChapterResponse, response.getBody());
-        verify(chapterService, times(1)).deleteChapter(chapterId);
+        UUID chapterId = UUID.randomUUID();
+        ChapterResponse response = new ChapterResponse();
+        when(chapterService.deleteChapter(chapterId, userDetails)).thenReturn(response);
+
+        ResponseEntity<ChapterResponse> result = chapterController.deleteChapter(chapterId, userDetails);
+
+        assertEquals(response, result.getBody());
+        verify(chapterService, times(1)).deleteChapter(chapterId, userDetails);
+    }
+
+    @Test
+    void deleteChapter_ChapterNotFound() {
+        UUID chapterId = UUID.randomUUID();
+        when(chapterService.deleteChapter(chapterId, userDetails)).thenThrow(new IllegalArgumentException("Chapter not found"));
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            chapterController.deleteChapter(chapterId, userDetails);
+        });
+
+        assertEquals("Chapter not found", exception.getMessage());
     }
 
     @Test
     void createChapter_InvalidCourseId() {
-        CreateChapterRequest request = new CreateChapterRequest(null, 1, "Invalid Chapter");
-        when(chapterService.createChapter(request)).thenThrow(new IllegalArgumentException("Course ID cannot be null"));
+        UUID invalidCourseId = UUID.randomUUID();
+        CreateChapterRequest request = new CreateChapterRequest(invalidCourseId, 1, "New Chapter");
+        when(chapterService.createChapter(request, userDetails)).thenThrow(new IllegalArgumentException("Invalid course ID"));
+
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            chapterController.createNewChapter(request);
+            chapterController.createNewChapter(request, userDetails);
         });
 
-        assertEquals("Course ID cannot be null", exception.getMessage());
+        assertEquals("Invalid course ID", exception.getMessage());
     }
 
     @Test
@@ -105,10 +133,12 @@ class ChapterControllerTest {
         UpdateChapterRequest request = new UpdateChapterRequest();
         request.setChapterId(UUID.randomUUID());
         request.setName("Updated Chapter");
-        when(chapterService.updateChapter(request)).thenThrow(new RuntimeException("Chapter not found"));
-        Exception exception = assertThrows(RuntimeException.class, () -> {
-            chapterController.updateChapter(request);
+        when(chapterService.updateChapter(request, userDetails)).thenThrow(new IllegalArgumentException("Chapter not found"));
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            chapterController.updateChapter(request, userDetails);
         });
+
         assertEquals("Chapter not found", exception.getMessage());
     }
 
@@ -126,9 +156,10 @@ class ChapterControllerTest {
     @Test
     void createChapter_MissingName() {
         CreateChapterRequest request = new CreateChapterRequest(courseId, 1, "");
+        when(chapterService.createChapter(request, userDetails)).thenThrow(new IllegalArgumentException("Chapter name cannot be empty"));
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            chapterController.createNewChapter(request);
+            chapterController.createNewChapter(request, userDetails);
         });
 
         assertEquals("Chapter name cannot be empty", exception.getMessage());
@@ -137,24 +168,22 @@ class ChapterControllerTest {
     @Test
     void createChapter_ServiceError() {
         CreateChapterRequest request = new CreateChapterRequest(courseId, 1, "New Chapter");
-
-        when(chapterService.createChapter(request)).thenThrow(new RuntimeException("Internal Server Error"));
+        when(chapterService.createChapter(request, userDetails)).thenThrow(new RuntimeException("Service error"));
 
         Exception exception = assertThrows(RuntimeException.class, () -> {
-            chapterController.createNewChapter(request);
+            chapterController.createNewChapter(request, userDetails);
         });
 
-        assertEquals("Internal Server Error", exception.getMessage());
+        assertEquals("Service error", exception.getMessage());
     }
 
     @Test
-    void createChapter_ChapterAlreadyExists() {
-        CreateChapterRequest request = new CreateChapterRequest(courseId, 1, "Existing Chapter");
-
-        when(chapterService.createChapter(request)).thenThrow(new IllegalArgumentException("Chapter already exists"));
+    void createNewChapter_ChapterAlreadyExists() {
+        CreateChapterRequest request = new CreateChapterRequest(courseId, 1, "New Chapter");
+        when(chapterService.createChapter(request, userDetails)).thenThrow(new IllegalArgumentException("Chapter already exists"));
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            chapterController.createNewChapter(request);
+            chapterController.createNewChapter(request, userDetails);
         });
 
         assertEquals("Chapter already exists", exception.getMessage());
@@ -163,14 +192,12 @@ class ChapterControllerTest {
     @Test
     void createChapter_Unauthorized() {
         CreateChapterRequest request = new CreateChapterRequest(courseId, 1, "New Chapter");
-
-        when(chapterService.createChapter(request)).thenThrow(new SecurityException("Unauthorized"));
+        when(chapterService.createChapter(request, userDetails)).thenThrow(new SecurityException("Unauthorized"));
 
         Exception exception = assertThrows(SecurityException.class, () -> {
-            chapterController.createNewChapter(request);
+            chapterController.createNewChapter(request, userDetails);
         });
 
         assertEquals("Unauthorized", exception.getMessage());
     }
-
 }

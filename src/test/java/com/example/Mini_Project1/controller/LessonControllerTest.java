@@ -1,26 +1,34 @@
 package com.example.Mini_Project1.controller;
 
-import com.example.Mini_Project1.request.lesson.CreateLessonRequest;
-import com.example.Mini_Project1.request.lesson.UpdateLessonRequest;
-import com.example.Mini_Project1.response.lesson.LessonResponse;
-import com.example.Mini_Project1.service.LessonService;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.List;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import com.example.Mini_Project1.request.lesson.CreateLessonRequest;
+import com.example.Mini_Project1.request.lesson.UpdateLessonRequest;
+import com.example.Mini_Project1.response.lesson.LessonResponse;
+import com.example.Mini_Project1.service.LessonService;
 
 class LessonControllerTest {
 
     @Mock
     private LessonService lessonService;
+
+    @Mock
+    private UserDetails userDetails;
 
     @InjectMocks
     private LessonController lessonController;
@@ -41,13 +49,16 @@ class LessonControllerTest {
     }
 
     @Test
-    void createLesson_Success() {
-        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1, "New Lesson", "resourceUrl", "videoUrl", 1);
-        when(lessonService.createLesson(request)).thenReturn(mockLessonResponse);
-        ResponseEntity<LessonResponse> response = lessonController.createNewLesson(request);
+    void createLesson_Success() throws Exception {
+        CreateLessonRequest request = new CreateLessonRequest(chapterId, 1, "New Lesson", 1);
+        LessonResponse lessonResponse = new LessonResponse();
+        when(lessonService.createLesson(request, userDetails)).thenReturn(lessonResponse);
+
+        ResponseEntity<LessonResponse> response = lessonController.createLesson(request, userDetails);
+
         assertEquals(200, response.getStatusCode().value());
-        assertEquals(mockLessonResponse, response.getBody());
-        verify(lessonService, times(1)).createLesson(request);
+        assertEquals(lessonResponse, response.getBody());
+        verify(lessonService, times(1)).createLesson(request, userDetails);
     }
 
     @Test
@@ -64,28 +75,28 @@ class LessonControllerTest {
         UpdateLessonRequest request = new UpdateLessonRequest();
         request.setLessonId(lessonId);
         request.setName("Updated Lesson");
-        when(lessonService.updateLesson(request)).thenReturn(mockLessonResponse);
-        ResponseEntity<LessonResponse> response = lessonController.updateLesson(request);
+        when(lessonService.updateLesson(request, userDetails)).thenReturn(mockLessonResponse);
+        ResponseEntity<LessonResponse> response = lessonController.updateLesson(request, userDetails);
         assertEquals(200, response.getStatusCode().value());
         assertEquals(mockLessonResponse, response.getBody());
-        verify(lessonService, times(1)).updateLesson(request);
+        verify(lessonService, times(1)).updateLesson(request, userDetails);
     }
 
     @Test
     void deleteLesson_Success() {
-        when(lessonService.deleteLesson(lessonId)).thenReturn(mockLessonResponse);
-        ResponseEntity<LessonResponse> response = lessonController.deleteLesson(lessonId);
+        when(lessonService.deleteLesson(lessonId, userDetails)).thenReturn(mockLessonResponse);
+        ResponseEntity<LessonResponse> response = lessonController.deleteLesson(lessonId, userDetails);
         assertEquals(200, response.getStatusCode().value());
         assertEquals(mockLessonResponse, response.getBody());
-        verify(lessonService, times(1)).deleteLesson(lessonId);
+        verify(lessonService, times(1)).deleteLesson(lessonId, userDetails);
     }
 
     @Test
-    void createLesson_InvalidData() {
-        CreateLessonRequest request = new CreateLessonRequest(null, 1, "", "resourceUrl", "videoUrl", 1);
-        when(lessonService.createLesson(request)).thenThrow(new IllegalArgumentException("Invalid data"));
+    void createLesson_InvalidData() throws Exception {
+        CreateLessonRequest request = new CreateLessonRequest(null, 1, "", 1);
+        when(lessonService.createLesson(request, userDetails)).thenThrow(new IllegalArgumentException("Invalid data"));
         try {
-            lessonController.createNewLesson(request);
+            lessonController.createLesson(request, userDetails);
         } catch (Exception e) {
             assertEquals(IllegalArgumentException.class, e.getClass());
         }
@@ -106,21 +117,16 @@ class LessonControllerTest {
         UpdateLessonRequest request = new UpdateLessonRequest();
         request.setLessonId(UUID.randomUUID());
         request.setName("Updated Lesson");
-
-        when(lessonService.updateLesson(request)).thenThrow(new RuntimeException("Lesson not found"));
-
-        ResponseEntity<LessonResponse> response = lessonController.updateLesson(request);
-
+        when(lessonService.updateLesson(request, userDetails)).thenThrow(new RuntimeException("Lesson not found"));
+        ResponseEntity<LessonResponse> response = lessonController.updateLesson(request, userDetails);
         assertEquals(404, response.getStatusCode().value());
         assertNull(response.getBody());
     }
 
     @Test
     void deleteLesson_LessonNotFound() {
-        when(lessonService.deleteLesson(lessonId)).thenThrow(new RuntimeException("Lesson not found"));
-
-        ResponseEntity<LessonResponse> response = lessonController.deleteLesson(lessonId);
-
+        when(lessonService.deleteLesson(lessonId, userDetails)).thenThrow(new RuntimeException("Lesson not found"));
+        ResponseEntity<LessonResponse> response = lessonController.deleteLesson(lessonId, userDetails);
         assertEquals(404, response.getStatusCode().value());
         assertNull(response.getBody());
     }
@@ -134,14 +140,11 @@ class LessonControllerTest {
     }
 
     @Test
-    void createLesson_ChapterNotFound() {
-        CreateLessonRequest request = new CreateLessonRequest(UUID.randomUUID(), 1, "New Lesson", "resourceUrl",
-                "videoUrl", 1);
-
-        when(lessonService.createLesson(request)).thenThrow(new RuntimeException("Chapter not found"));
-        ResponseEntity<LessonResponse> response = lessonController.createNewLesson(request);
+    void createLesson_ChapterNotFound() throws Exception {
+        CreateLessonRequest request = new CreateLessonRequest(UUID.randomUUID(), 1, "New Lesson", 1);
+        when(lessonService.createLesson(request, userDetails)).thenThrow(new RuntimeException("Chapter not found"));
+        ResponseEntity<LessonResponse> response = lessonController.createLesson(request, userDetails);
         assertEquals(404, response.getStatusCode().value());
         assertNull(response.getBody());
     }
-
 }
