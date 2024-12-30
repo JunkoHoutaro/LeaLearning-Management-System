@@ -1,14 +1,15 @@
 package com.example.Mini_Project1.request.QuizzAndQuestion;
 
 import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.util.List;
 import java.util.UUID;
 
-@AllArgsConstructor
+@NoArgsConstructor
 @Getter
+@Setter
 public class CreateQuestionRequest {
     @NotNull(message = "Quizz id is required")
     private UUID quizzId;
