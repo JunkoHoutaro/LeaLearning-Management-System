@@ -1,16 +1,19 @@
 package com.example.Mini_Project1.response.lesson;
 
+import java.io.Serializable;
+import java.util.Date;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
+
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.io.Serializable;
-import java.util.Date;
-
 @NoArgsConstructor
 @Getter
 @Setter
+@AllArgsConstructor
 public class LessonResponse implements Serializable {
 
     private String id;
