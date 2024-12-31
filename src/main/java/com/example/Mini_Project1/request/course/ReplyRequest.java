@@ -6,6 +6,7 @@ import lombok.Setter;
 @Setter
 public class ReplyRequest {
     private String rootCommentId;
-    private String userId;
     private String content;
+    public String courseId;
 }
+

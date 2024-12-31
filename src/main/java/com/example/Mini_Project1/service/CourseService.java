@@ -71,7 +71,7 @@ public class CourseService {
 
         // Sort result
         if (priceAscending) {
-            courses.sort(Comparator.comparing(Course::getPrice)); 
+            courses.sort(Comparator.comparing(Course::getPrice));
         }else {
             courses.sort(Comparator.comparing(Course::getPrice).reversed());
         }
@@ -184,3 +184,4 @@ public class CourseService {
     }
 
 }
+

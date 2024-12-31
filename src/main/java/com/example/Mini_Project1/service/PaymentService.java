@@ -293,4 +293,7 @@ public class PaymentService {
 
     return new PaymentStatusResponse(paymentLinkData.getStatus(), paymentLinkData.getAmount());
   }
+  public boolean isUserAuthorizedToComment(String userId, String courseId) {
+    return paymentRepository.existsByUserIdAndCourseId(userId, courseId);
+  }
 }
