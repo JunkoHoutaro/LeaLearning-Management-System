@@ -1,6 +1,8 @@
 package com.example.Mini_Project1.controller;
 
+import com.example.Mini_Project1.exception.AuthenticationException;
 import com.example.Mini_Project1.exception.ErrorResponse;
+import com.example.Mini_Project1.exception.ResourceNotFoundException;
 import com.example.Mini_Project1.request.course.CommentRequest;
 import com.example.Mini_Project1.request.course.ReplyRequest;
 import com.example.Mini_Project1.request.course.UpdateCommentRequest;
@@ -35,70 +37,60 @@ public class CommentController {
     @ApiResponse(responseCode = "201", description = "Comment created successfully")
     @ApiResponse(responseCode = "403", description = "User not authorized",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<?> createComment(
+    public ResponseEntity<CommentResponse> createComment(
             @Valid @RequestBody CommentRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
-        try {
-            boolean isUserAuthorized = paymentService.isUserAuthorizedToComment(
-                    userDetails.getUsername(), String.valueOf(request.getCourseId()));
-            if (!isUserAuthorized) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(new ErrorResponse(403, "Forbidden", "User is not authorized to comment."));
-            }
+        boolean isUserAuthorized = paymentService.isUserAuthorizedToComment(
+                userDetails.getUsername(), String.valueOf(request.getCourseId()));
 
-            CommentResponse commentResponse = commentService.createComment(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(commentResponse);
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse(500, "Internal Server Error", "An unexpected error occurred: " + e.getMessage()));
+        if (!isUserAuthorized) {
+            throw new AuthenticationException("User is not authorized to comment.");
         }
+
+        CommentResponse commentResponse = commentService.createComment(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(commentResponse);
     }
 
     @PostMapping("/reply")
     @Operation(summary = "Reply to a comment")
-    public ResponseEntity<?> replyToComment(
+    @ApiResponse(responseCode = "200", description = "Comment replied successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid input data",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Parent comment not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<CommentResponse> replyToComment(
             @Valid @RequestBody ReplyRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
-        try {
-            CommentResponse response = commentService.replyToComment(request, userDetails);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse(500, "Internal Server Error", "An unexpected error occurred: " + e.getMessage()));
-        }
+        CommentResponse response = commentService.replyToComment(request, userDetails);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{courseId}")
     @Operation(summary = "Get comments by course ID")
-    public ResponseEntity<?> getCommentsByCourseId(@PathVariable UUID courseId) {
-        try {
-            List<CommentResponse> comments = commentService.getCommentsByCourseId(courseId.toString());
-            if (comments.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse(404, "Not Found", "No comments found for the specified course ID"));
-            }
-            return ResponseEntity.ok(comments);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse(500, "Internal Server Error", "An unexpected error occurred: " + e.getMessage()));
+    @ApiResponse(responseCode = "200", description = "List of comments returned successfully")
+    @ApiResponse(responseCode = "404", description = "No comments found for the course ID",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<List<CommentResponse>> getCommentsByCourseId(
+            @PathVariable String courseId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        List<CommentResponse> comments = commentService.getCommentsByCourseId(courseId, userDetails);
+        if (comments.isEmpty()) {
+            throw new ResourceNotFoundException("No comments found for the specified course ID.");
         }
+        return ResponseEntity.ok(comments);
     }
 
     @GetMapping
     @Operation(summary = "Get all comments")
-    public ResponseEntity<?> getAllComments() {
-        try {
-            List<CommentResponse> allComments = commentService.getAllComments();
-            if (allComments.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse(404, "Not Found", "No comments found"));
-            }
-            return ResponseEntity.ok(allComments);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse(500, "Internal Server Error", "An unexpected error occurred: " + e.getMessage()));
+    @ApiResponse(responseCode = "200", description = "List of all comments returned successfully")
+    @ApiResponse(responseCode = "404", description = "No comments found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<List<CommentResponse>> getAllComments(@AuthenticationPrincipal UserDetails userDetails) {
+        List<CommentResponse> allComments = commentService.getAllComments(userDetails);
+        if (allComments.isEmpty()) {
+            throw new ResourceNotFoundException("No comments found.");
         }
+        return ResponseEntity.ok(allComments);
     }
 
     @PatchMapping("/{commentId}")
@@ -106,19 +98,14 @@ public class CommentController {
     @ApiResponse(responseCode = "200", description = "Comment updated successfully")
     @ApiResponse(responseCode = "400", description = "Invalid comment ID format",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<?> updateComment(
+    @ApiResponse(responseCode = "404", description = "Comment not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<CommentResponse> updateComment(
             @PathVariable UUID commentId,
-            @Valid @RequestBody UpdateCommentRequest request) {
-        try {
-            CommentResponse commentResponse = commentService.updateCommentContent(commentId, request);
-            return ResponseEntity.ok(commentResponse);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(400, "Bad Request", "Invalid UUID format for commentId"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse(500, "Internal Server Error", "An unexpected error occurred: " + e.getMessage()));
-        }
+            @Valid @RequestBody UpdateCommentRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        CommentResponse commentResponse = commentService.updateCommentContent(commentId, request, userDetails);
+        return ResponseEntity.ok(commentResponse);
     }
 
     @DeleteMapping("/{commentId}")
@@ -126,16 +113,11 @@ public class CommentController {
     @ApiResponse(responseCode = "200", description = "Comment deleted successfully")
     @ApiResponse(responseCode = "400", description = "Invalid comment ID format",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<?> deleteComment(@PathVariable UUID commentId) {
-        try {
-            commentService.deleteComment(commentId);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(400, "Bad Request", "Invalid UUID format for commentId"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse(500, "Internal Server Error", "An unexpected error occurred: " + e.getMessage()));
-        }
+    @ApiResponse(responseCode = "404", description = "Comment not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<String> deleteComment(@PathVariable UUID commentId,
+                                                @AuthenticationPrincipal UserDetails userDetails) {
+        commentService.deleteComment(commentId, userDetails);
+        return ResponseEntity.ok("Comment deleted successfully.");
     }
 }

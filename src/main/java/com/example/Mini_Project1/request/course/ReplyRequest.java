@@ -7,6 +7,5 @@ import lombok.Setter;
 public class ReplyRequest {
     private String rootCommentId;
     private String content;
-    public String courseId;
 }
 
