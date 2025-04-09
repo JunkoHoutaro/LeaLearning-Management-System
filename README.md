@@ -55,5 +55,5 @@ A Java Spring Boot-based learning management system (LMS) that allows users to c
 1. Clone the repository:
 
 ```bash
-git clone http://git.fa.edu.vn/hcm24_cpl_java_12/team-2/cursus.git
+git clone https://github.com/JunkoHoutaro/LeaLearning-Management-System.git
 cd cursus
