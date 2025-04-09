@@ -31,5 +31,3 @@ build/
 
 ### VS Code ###
 .vscode/
-echo "src/main/resources/application.properties" >> .gitignore
-echo "src/main/resources/.env" >> .gitignore
